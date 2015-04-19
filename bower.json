@@ -1,0 +1,9 @@
+{
+  "name": "flipCache",
+  "dependencies": {
+    "angular": ""
+  },
+  "devDependencies": {
+    "angular-mocks": ""
+  }
+}
