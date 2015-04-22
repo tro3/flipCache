@@ -242,11 +242,23 @@
         return this._docCache[collection][doc._id];
       };
 
-      DbCache.prototype.invalidateSingle = function(collection, doc) {
+      DbCache.prototype.invalidateDoc = function(collection, id) {
         this._setupCache(collection);
-        if (doc._id in this._docCache[collection]) {
-          return this._docCache[collection][doc._id].valid = false;
+        if (id in this._docCache[collection]) {
+          return this._docCache[collection][id].valid = false;
         }
+      };
+
+      DbCache.prototype.invalidateLists = function(collection) {
+        var key, ref, results, val;
+        this._setupCache(collection);
+        ref = this._listCache[collection];
+        results = [];
+        for (key in ref) {
+          val = ref[key];
+          results.push(val.valid = false);
+        }
+        return results;
       };
 
       DbCache.prototype.find = function(collection, query, options, fields) {
@@ -339,7 +351,7 @@
         this._setupCache(collection);
         return qDelete(collection, doc).then((function(_this) {
           return function(resp) {
-            _this.invalidateSingle(collection, doc);
+            _this.invalidateDoc(collection, doc._id);
             return null;
           };
         })(this))["catch"](function(err) {

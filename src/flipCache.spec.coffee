@@ -3,7 +3,7 @@ p = console.log
 describe "flipCache", ->
     cache = null
     http = null
-  
+
     beforeEach ->
         module('flipCache')
         inject ($httpBackend, flipCache) ->
@@ -15,7 +15,7 @@ describe "flipCache", ->
         http.verifyNoOutstandingRequest()
 
 
-    describe "find", ->        
+    describe "find", ->
         it "returns simple list query, caching result", (done) ->
             data =
                 _status: 'OK'
@@ -46,7 +46,7 @@ describe "flipCache", ->
             http.flush()
 
 
-    describe "findOne", ->        
+    describe "findOne", ->
         it "returns simple item query, caching result", (done) ->
             data =
                 _status: 'OK'
@@ -76,10 +76,10 @@ describe "flipCache", ->
             http.flush()
 
 
-    describe "insert", ->        
+    describe "insert", ->
         it "sends proper API call, caching result", (done) ->
             data = {name:'Bob'}
-            respData = 
+            respData =
                 _status: 'OK'
                 _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
             cache.insert('test', data).then (resp) ->
@@ -91,10 +91,10 @@ describe "flipCache", ->
             http.flush()
 
 
-    describe "update", ->        
+    describe "update", ->
         it "sends proper API call, caching result", (done) ->
             data = {_id:12346, name:'Bob'}
-            respData = 
+            respData =
                 _status: 'OK'
                 _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
             cache.update('test', data).then (resp) ->
@@ -106,7 +106,7 @@ describe "flipCache", ->
             http.flush()
 
 
-    describe "delete", ->        
+    describe "delete", ->
         it "sends proper API call and invalidates cache of item", (done) ->
             data =
                 _status: 'OK'
@@ -135,4 +135,149 @@ describe "flipCache", ->
             http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
             http.expectDELETE("/api/test/12346").respond(200, {_status:"OK"})
             http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.flush()
+
+
+    describe "invalidateDoc", ->
+        it "invalidates docCache of given document", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.invalidateDoc('test', 12346)
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                done()
+            http.expectGET("/api/test?q=#{escape('{\"_id\"')}:#{escape('12346}')}").respond(200, data)
+            http.expectGET("/api/test?q=#{escape('{\"_id\"')}:#{escape('12346}')}").respond(200, data)
+            http.flush()
+        
+        it "invalidates listCache containing given document", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.invalidateDoc('test', 12346)
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "doesn't invalidate listCache not containing given document", (done) ->
+            data1 =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                    {_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                ]
+            data2 =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.find('test', {name:'Bob'})
+            .then (docs) ->
+                assert.equal docs[1]._id, 12347
+                cache.invalidateDoc('test', 12346)
+                cache.find('test', {name:'Bob'})
+            .then (docs) ->
+                assert.equal docs[1]._id, 12347
+                done()
+            http.expectGET("/api/test").respond(200, data1)
+            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data2)
+            http.flush()
+
+
+    describe "invalidateLists", ->
+        it "invalidates find listCache of given collection", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.invalidateLists('test')
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+        
+        it "invalidates findOne listCache of given collection", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                ]
+            cache.findOne('test', {name:'Bob'})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.findOne('test', {name:'Bob'})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.invalidateLists('test')
+                cache.findOne('test', {name:'Bob'})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                done()
+            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.flush()
+
+        it "doesn't invalidate findOne docCache of individual documents", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.invalidateLists('test')
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                done()
+            http.expectGET("/api/test").respond(200, data)
             http.flush()

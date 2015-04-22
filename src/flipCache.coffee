@@ -221,12 +221,18 @@ angular.module 'flipCache', [
             @_docCache[collection][doc._id][hashF] = doc
             return @_docCache[collection][doc._id]
 
-        
-        invalidateSingle: (collection, doc) ->
-            @_setupCache(collection)
-            if (doc._id of @_docCache[collection])
-                @_docCache[collection][doc._id].valid = false
 
+
+        invalidateDoc: (collection, id) ->
+            @_setupCache(collection)
+            if (id of @_docCache[collection])
+                @_docCache[collection][id].valid = false
+
+
+        invalidateLists: (collection) ->
+            @_setupCache(collection)
+            for key, val of @_listCache[collection]
+                val.valid = false
 
 
         find: (collection, query={}, options={}, fields={}) ->
@@ -279,7 +285,7 @@ angular.module 'flipCache', [
             @_setupCache(collection)
             qDelete(collection, doc)
             .then (resp) =>
-                @invalidateSingle(collection, doc)
+                @invalidateDoc(collection, doc._id)
                 null
             .catch (err) ->
                 throw err
