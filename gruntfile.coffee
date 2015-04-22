@@ -6,6 +6,9 @@ module.exports = (grunt) ->
     pkg: grunt.file.readJSON('package.json'),
     
     coffeelint:
+      options:
+        indentation:
+          value: 4
       src: ['src/**/*.coffee', '!src/**/*.spec.coffee']
   
     coffee:
@@ -45,7 +48,7 @@ module.exports = (grunt) ->
         tasks: ['coffeelint', 'build', 'karma:monitor:run']  
 
       coffee_test:
-        files: ['src/**/*.coffee']
+        files: ['src/**/*.spec.coffee']
         tasks: ['karma:monitor:run']  
     )
 
