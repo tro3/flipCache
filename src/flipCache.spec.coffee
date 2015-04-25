@@ -57,7 +57,7 @@ describe "flipCache", ->
                 cache.findOne('test', {name:'Bob'}).then (data2) ->
                     assert.deepEqual data2, data._items[0]
                     done()
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.flush()
 
         it "returns simple item query, caching individual result as id", (done) ->
@@ -72,7 +72,7 @@ describe "flipCache", ->
                 cache.findOne('test', {_id:12346}).then (data2) ->
                     assert.deepEqual data2, data._items[0]
                     done()
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.flush()
 
 
@@ -117,9 +117,9 @@ describe "flipCache", ->
                     assert.isNull resp
                     cache.findOne('test', {_id:12346}).then (resp) ->
                         done()
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.expectDELETE("/api/test/12346").respond(200, {_status:"OK"})
-            http.expectGET("/api/test?q=#{escape('{\"_id\"')}:#{escape('12346}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
 
         it "sends proper API call and invalidates cache of original spec", (done) ->
@@ -132,9 +132,9 @@ describe "flipCache", ->
                     assert.isNull resp
                     cache.findOne('test', {name:'Bob'}).then (resp) ->
                         done()
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.expectDELETE("/api/test/12346").respond(200, {_status:"OK"})
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.flush()
 
 
@@ -155,8 +155,8 @@ describe "flipCache", ->
             .then (doc) ->
                 assert.equal doc._id, 12346
                 done()
-            http.expectGET("/api/test?q=#{escape('{\"_id\"')}:#{escape('12346}')}").respond(200, data)
-            http.expectGET("/api/test?q=#{escape('{\"_id\"')}:#{escape('12346}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
         
         it "invalidates listCache containing given document", (done) ->
@@ -210,7 +210,7 @@ describe "flipCache", ->
                 assert.equal docs[1]._id, 12347
                 done()
             http.expectGET("/api/test").respond(200, data1)
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data2)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data2)
             http.flush()
 
 
@@ -256,8 +256,8 @@ describe "flipCache", ->
             .then (doc) ->
                 assert.equal doc._id, 12346
                 done()
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
-            http.expectGET("/api/test?q=#{escape('{\"name\"')}:#{escape('\"Bob\"}')}").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.flush()
 
         it "doesn't invalidate findOne docCache of individual documents", (done) ->

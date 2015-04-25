@@ -472,3 +472,33 @@
   }]);
 
 }).call(this);
+
+(function() {
+  angular.module('flipList', ['flipCache', 'flipDoc']).factory('flipList', ["$q", "flipCache", "flipDoc", function($q, flipCache, flipDoc) {
+    return function(config) {
+      var flipList;
+      flipList = [];
+      flipList.collection = config.collection;
+      flipList.filter = config.filter || {};
+      flipList.options = config.options || {};
+      flipList.fields = config.fields || {};
+      flipList.$get = function() {
+        return $q(function(resolve, reject) {
+          return flipCache.find(flipList.collection, flipList.filter, flipList.options, flipList.fields).then(function(docs) {
+            var i, len, x;
+            flipList.splice(0, flipList.length);
+            for (i = 0, len = docs.length; i < len; i++) {
+              x = docs[i];
+              flipList.push(flipDoc(flipList.collection, x));
+            }
+            return resolve(this);
+          })["catch"](function(err) {
+            return reject(err);
+          });
+        });
+      };
+      return flipList;
+    };
+  }]);
+
+}).call(this);
