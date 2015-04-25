@@ -366,3 +366,109 @@
   }]);
 
 }).call(this);
+
+(function() {
+  angular.module('flipDoc', ['flipCache']).factory('flipDoc', ["$q", "flipCache", function($q, flipCache) {
+    var FlipDoc;
+    FlipDoc = (function() {
+      function FlipDoc(first, second) {
+        this._id = null;
+        if (typeof first === 'object') {
+          this._extend(first);
+        } else {
+          this._collection = first;
+          if (typeof second === 'object') {
+            this._extend(second);
+          } else {
+            this._id = second;
+          }
+        }
+      }
+
+      FlipDoc.prototype._extend = function(data) {
+        var key, results, val;
+        results = [];
+        for (key in data) {
+          val = data[key];
+          if (!angular.isFunction(val)) {
+            results.push(this[key] = val);
+          } else {
+            results.push(void 0);
+          }
+        }
+        return results;
+      };
+
+      FlipDoc.prototype._clear = function() {
+        var key, results, val;
+        results = [];
+        for (key in this) {
+          val = this[key];
+          if (!angular.isFunction(val)) {
+            results.push(this[key] = null);
+          } else {
+            results.push(void 0);
+          }
+        }
+        return results;
+      };
+
+      FlipDoc.prototype.$get = function() {
+        return $q((function(_this) {
+          return function(resolve, reject) {
+            return flipCache.findOne(_this._collection, {
+              _id: _this._id
+            }).then(function(doc) {
+              _this._extend(doc);
+              return resolve(_this);
+            })["catch"](function(err) {
+              return reject(err);
+            });
+          };
+        })(this));
+      };
+
+      FlipDoc.prototype.$save = function() {
+        return $q((function(_this) {
+          return function(resolve, reject) {
+            if (_this._id) {
+              return flipCache.update(_this._collection, _this).then(function(doc) {
+                _this._extend(doc);
+                return resolve(_this);
+              })["catch"](function(err) {
+                return reject(err);
+              });
+            } else {
+              return flipCache.insert(_this._collection, _this).then(function(doc) {
+                _this._extend(doc);
+                return resolve(_this);
+              })["catch"](function(err) {
+                return reject(err);
+              });
+            }
+          };
+        })(this));
+      };
+
+      FlipDoc.prototype.$delete = function() {
+        return $q((function(_this) {
+          return function(resolve, reject) {
+            return flipCache.remove(_this._collection, _this).then(function(doc) {
+              _this._clear();
+              return resolve(_this);
+            })["catch"](function(err) {
+              return reject(err);
+            });
+          };
+        })(this));
+      };
+
+      return FlipDoc;
+
+    })();
+    return function(collection, id) {
+      return new FlipDoc(collection, id);
+    };
+  }]);
+
+}).call(this);
