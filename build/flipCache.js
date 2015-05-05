@@ -154,8 +154,23 @@
     "Cache structure\n\ncreate: invalidates all listQueries of a collection\ndelete: invalidates all listQueries of a collection\nupdate: invalidates individual (but locally recaches)\n\n\nNote for server-side paging and sorting, these params will\nhave to show up in the listCache querySpecs...\n\nlistCache:\n    {collectionName:\n        querySpec1:\n            valid: true\n            docs: [doc1, doc2..]\n        querySpec2:\n        ...\n    }\ndocCache:\n    {collectionName:\n        id1:\n            valid: true\n            fieldSpec1: {doc}\n            fieldSpec2: {doc}\n        id2:\n        ...\n    }\n";
     DbCache = (function() {
       function DbCache() {
+        var primus;
         this._listCache = {};
         this._docCache = {};
+        this._actives = [];
+        primus = Primus.connect();
+        primus.on('data', (function(_this) {
+          return function(data) {
+            switch (data.action) {
+              case 'create':
+                return _this._resetList(data.collection);
+              case 'delete':
+                return _this._resetList(data.collection);
+              case 'edit':
+                return _this._resetDoc(data.collection, data.id);
+            }
+          };
+        })(this));
       }
 
       DbCache.prototype._setupCache = function(collection) {
@@ -240,6 +255,24 @@
         this._docCache[collection][doc._id].valid = true;
         this._docCache[collection][doc._id][hashF] = doc;
         return this._docCache[collection][doc._id];
+      };
+
+      DbCache.prototype._resetList = function(collection) {
+        this.invalidateLists(collection);
+        return this._actives.forEach(function(active) {
+          if ('collection' in active && active.collection === collection) {
+            return active.$get();
+          }
+        });
+      };
+
+      DbCache.prototype._resetDoc = function(collection, id) {
+        this.invalidateDoc(collection, id);
+        return this._actives.forEach(function(active) {
+          if ('_collection' in active && active._collection === collection && active._id === id) {
+            return active.$get();
+          }
+        });
       };
 
       DbCache.prototype.invalidateDoc = function(collection, id) {
@@ -359,6 +392,18 @@
         });
       };
 
+      DbCache.prototype.setActive = function(val) {
+        return this._actives = [val];
+      };
+
+      DbCache.prototype.addActive = function(val) {
+        return this._actives.push(val);
+      };
+
+      DbCache.prototype.clearActives = function() {
+        return this._actives = [];
+      };
+
       return DbCache;
 
     })();
@@ -463,6 +508,14 @@
         })(this));
       };
 
+      FlipDoc.prototype.$setActive = function() {
+        return flipCache.setActive(this);
+      };
+
+      FlipDoc.prototype.$addActive = function() {
+        return flipCache.addActive(this);
+      };
+
       return FlipDoc;
 
     })();
@@ -496,6 +549,12 @@
             return reject(err);
           });
         });
+      };
+      flipList.$setActive = function() {
+        return flipCache.setActive(flipList);
+      };
+      flipList.$addActive = function() {
+        return flipCache.addActive(flipList);
       };
       return flipList;
     };

@@ -281,3 +281,148 @@ describe "flipCache", ->
                 done()
             http.expectGET("/api/test").respond(200, data)
             http.flush()
+
+            
+    describe "primus doc data event", ->
+        it "invalidates docCache of given document", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346}
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                done()
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.flush()
+        
+        it "invalidates listCache containing given document", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346}
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "doesn't invalidate listCache not containing given document", (done) ->
+            data1 =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                    {_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                ]
+            data2 =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.find('test', {name:'Bob'})
+            .then (docs) ->
+                assert.equal docs[1]._id, 12347
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346}
+                cache.find('test', {name:'Bob'})
+            .then (docs) ->
+                assert.equal docs[1]._id, 12347
+                done()
+            http.expectGET("/api/test").respond(200, data1)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data2)
+            http.flush()
+
+            
+    describe "primus list event", ->
+        it "invalidates find listCache of given collection", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                Primus.fire 'data', {action:'create', collection:'test', id:1}
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+        
+        it "invalidates findOne listCache of given collection", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                ]
+            cache.findOne('test', {name:'Bob'})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                cache.findOne('test', {name:'Bob'})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                Primus.fire 'data', {action:'delete', collection:'test', id:1}
+                cache.findOne('test', {name:'Bob'})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                done()
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
+            http.flush()
+
+        it "doesn't invalidate findOne docCache of individual documents", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                cache.find('test')
+            .then (docs) ->
+                assert.equal docs[1]._id, 12346
+                Primus.fire 'data', {action:'create', collection:'test', id:1}
+                cache.findOne('test', {_id:12346})
+            .then (doc) ->
+                assert.equal doc._id, 12346
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()

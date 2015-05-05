@@ -21,5 +21,11 @@ angular.module 'flipList', [
                     flipList.push(flipDoc(flipList.collection, x)) for x in docs
                     resolve(this)
                 .catch (err) -> reject(err)
+
+        flipList.$setActive = ->
+            flipCache.setActive(flipList)
+
+        flipList.$addActive = ->
+            flipCache.addActive(flipList)
         
         return flipList

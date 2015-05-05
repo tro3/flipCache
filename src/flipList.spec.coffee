@@ -28,7 +28,6 @@ describe "flipList", ->
         exp.forEach (item, ind) -> assertEqual(dut[ind], item)
 
 
-
     describe "$get", ->
         it "returns entire collection", (done) ->
             data =
@@ -73,4 +72,127 @@ describe "flipList", ->
                 assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
                 done()
             http.expectGET(encodeURI '/api/test?fields={"name":1}&q={"name":"Bob"}').respond(200, data)
+            http.flush()
+            
+
+    describe "$setActive", ->
+        it "causes list to be refreshed when primus event hits", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$setActive()
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                Primus.fire 'data', {action:'create', collection:'test', id:1}
+            .then ->
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "does not cause refresh when event hits for different collection", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$setActive()
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                Primus.fire 'data', {action:'create', collection:'test2', id:1}
+            .then ->
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "clears a previously-active list ", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst2 = flipList(
+                collection: 'test'
+                filter: {name:'Bob'}
+            )
+            inst.$get()
+            inst2.$get()
+            inst.$setActive()
+            inst2.$setActive()
+            Primus.fire 'data', {action:'create', collection:'test', id:1}
+            .then ->
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
+            http.flush()
+
+
+    describe "$addActive", ->
+        it "causes list to be refreshed when primus event hits", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$addActive()
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                Primus.fire 'data', {action:'create', collection:'test', id:1}
+            .then ->
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "does not cause refresh when event hits for different collection", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$addActive()
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                Primus.fire 'data', {action:'create', collection:'test2', id:1}
+            .then ->
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "does not clear a previously-active list ", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst2 = flipList(
+                collection: 'test'
+                filter: {name:'Bob'}
+            )
+            inst.$get()
+            inst2.$get()
+            inst.$addActive()
+            inst2.$addActive()
+            Primus.fire 'data', {action:'create', collection:'test', id:1}
+            .then ->
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.flush()

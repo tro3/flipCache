@@ -158,6 +158,16 @@ angular.module 'flipCache', [
         constructor: ->
             @_listCache = {}
             @_docCache = {}
+            @_actives = []
+
+            primus = Primus.connect()
+            primus.on 'data', (data) =>
+                switch data.action
+                    when 'create' then @_resetList(data.collection)
+                    when 'delete' then @_resetList(data.collection)
+                    when 'edit'   then @_resetDoc(data.collection, data.id)
+
+
 
         _setupCache: (collection) ->
             @_listCache[collection]  = {} if !(collection of @_listCache)
@@ -220,6 +230,20 @@ angular.module 'flipCache', [
             @_docCache[collection][doc._id].valid = true
             @_docCache[collection][doc._id][hashF] = doc
             return @_docCache[collection][doc._id]
+
+        _resetList: (collection) ->
+            @invalidateLists(collection)
+            @_actives.forEach (active) ->
+                if 'collection' of active and active.collection == collection
+                    active.$get()
+    
+        _resetDoc: (collection, id) ->
+            @invalidateDoc(collection, id)
+            @_actives.forEach (active) ->
+                if '_collection' of active and \
+                  active._collection == collection and \
+                  active._id == id
+                    active.$get()
 
 
 
@@ -289,6 +313,16 @@ angular.module 'flipCache', [
                 null
             .catch (err) ->
                 throw err
+
+
+        setActive: (val) ->
+            @_actives = [val]
+        
+        addActive: (val) ->
+            @_actives.push val
+        
+        clearActives: () ->
+            @_actives = []
 
 
     new DbCache
