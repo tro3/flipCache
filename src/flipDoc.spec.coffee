@@ -13,8 +13,8 @@ describe "flipDoc", ->
     afterEach ->
         http.verifyNoOutstandingExpectation()
         http.verifyNoOutstandingRequest()
-        
-        
+
+
     assertEqual = (dut, exp) ->
         assert.sameMembers Object.keys(dut), Object.keys(exp)
         for key, val of exp
