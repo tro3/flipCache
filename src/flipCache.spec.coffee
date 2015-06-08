@@ -45,6 +45,22 @@ describe "flipCache", ->
             http.expectGET('/api/test').respond(200, data)
             http.flush()
 
+        it "handles keyword _id queries", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [
+                    {_id:12345, _auth:{_edit:true, _delete:true}, name:'Bob'}
+                    {_id:12346, _auth:{_edit:true, _delete:true}, name:'Fred'}
+                ]
+            cache.find('test', {_id:{$in:[12345,12346]}}).then (data1) ->
+                assert.deepEqual data1, data._items
+                cache.find('test', {_id:12346}).then (data2) ->
+                    assert.deepEqual data2, [data._items[1]]
+                    done()
+            http.expectGET(encodeURI '/api/test?q={"_id":{"$in":[12345,12346]}}').respond(200, data)
+            http.flush()
+
 
     describe "findOne", ->
         it "returns simple item query, caching result", (done) ->

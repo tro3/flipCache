@@ -15,7 +15,9 @@ angular.module 'flipCache', [
         JSON.stringify(fields)
 
     isDocQuery = (query={}) ->
-        return Object.keys(query).length == 1 && Object.keys(query)[0] == '_id'
+        return Object.keys(query).length == 1 \
+            && Object.keys(query)[0] == '_id' \
+            && typeof(query._id) == 'number'
 
     deepcopy = (obj) ->
         if typeof obj != 'object'

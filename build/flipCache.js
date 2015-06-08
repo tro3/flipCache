@@ -24,7 +24,7 @@
       if (query == null) {
         query = {};
       }
-      return Object.keys(query).length === 1 && Object.keys(query)[0] === '_id';
+      return Object.keys(query).length === 1 && Object.keys(query)[0] === '_id' && typeof query._id === 'number';
     };
     deepcopy = function(obj) {
       var key, result, val, x;
