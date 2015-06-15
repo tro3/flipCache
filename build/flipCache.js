@@ -544,7 +544,7 @@
               x = docs[i];
               flipList.push(flipDoc(flipList.collection, x));
             }
-            return resolve(this);
+            return resolve(flipList);
           })["catch"](function(err) {
             return reject(err);
           });
