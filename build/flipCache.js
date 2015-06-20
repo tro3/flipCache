@@ -414,7 +414,7 @@
 
 (function() {
   angular.module('flipDoc', ['flipCache']).factory('flipDoc', ["$q", "flipCache", function($q, flipCache) {
-    var FlipDoc;
+    var FlipDoc, tmp;
     FlipDoc = (function() {
       function FlipDoc(first, second) {
         this._id = null;
@@ -465,6 +465,7 @@
               _id: _this._id
             }).then(function(doc) {
               _this._extend(doc);
+              flipCache.addActive(_this);
               return resolve(_this);
             })["catch"](function(err) {
               return reject(err);
@@ -519,16 +520,21 @@
       return FlipDoc;
 
     })();
-    return function(collection, id) {
+    tmp = function(collection, id) {
       return new FlipDoc(collection, id);
     };
+    tmp.clearActives = function() {
+      return flipCache.clearActives();
+    };
+    return tmp;
   }]);
 
 }).call(this);
 
 (function() {
   angular.module('flipList', ['flipCache', 'flipDoc']).factory('flipList', ["$q", "flipCache", "flipDoc", function($q, flipCache, flipDoc) {
-    return function(config) {
+    var tmp;
+    tmp = function(config) {
       var flipList;
       flipList = [];
       flipList.collection = config.collection;
@@ -544,6 +550,7 @@
               x = docs[i];
               flipList.push(flipDoc(flipList.collection, x));
             }
+            flipCache.addActive(flipList);
             return resolve(flipList);
           })["catch"](function(err) {
             return reject(err);
@@ -558,6 +565,10 @@
       };
       return flipList;
     };
+    tmp.$clearActives = function() {
+      return flipCache.clearActives();
+    };
+    return tmp;
   }]);
 
 }).call(this);

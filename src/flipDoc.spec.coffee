@@ -2,12 +2,15 @@ p = console.log
 
 describe "flipDoc", ->
     flipDoc = null
+    flipCache = null
     http = null
 
     beforeEach ->
         module('flipDoc')
-        inject ($httpBackend, _flipDoc_) ->
+        module('flipCache')
+        inject ($httpBackend, _flipDoc_, _flipCache_) ->
             flipDoc = _flipDoc_
+            flipCache = _flipCache_
             http = $httpBackend
 
     afterEach ->
@@ -33,6 +36,19 @@ describe "flipDoc", ->
             inst = flipDoc('test', 12346)
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                done()
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.flush()
+
+        it "adds simple doc query to actives", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipDoc('test', 12346)
+            assert.equal flipCache._actives.length, 0
+            inst.$get().then ->
+                assert.equal flipCache._actives.length, 1
                 done()
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
@@ -129,7 +145,6 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$setActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:12346}
@@ -144,7 +159,6 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$setActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:123}
@@ -161,7 +175,7 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst1 = flipDoc('test', 12346)
-            inst2 = flipDoc('test', 12347)
+            inst2 = flipDoc('test', 12347) # Note that we did not $get, so docs are not active
             inst1.$setActive()
             inst2.$setActive()
             Primus.fire 'data', {action:'edit', collection:'test', id:12346}
@@ -176,7 +190,6 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$addActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:12346}
@@ -191,7 +204,6 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$addActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:123}
@@ -200,7 +212,7 @@ describe "flipDoc", ->
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
 
-        it "clears a previously-active list ", (done) ->
+        it "doesn't clear a previously-active list ", (done) ->
             data1 =
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
@@ -208,7 +220,7 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst1 = flipDoc('test', 12346)
-            inst2 = flipDoc('test', 12347)
+            inst2 = flipDoc('test', 12347) # Note that we did not $get, so docs are not active
             inst1.$addActive()
             inst2.$addActive()
             Primus.fire 'data', {action:'edit', collection:'test', id:12346}
@@ -218,4 +230,19 @@ describe "flipDoc", ->
                 done()
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data1)
             http.expectGET(encodeURI '/api/test?q={"_id":12347}').respond(200, data2)
+            http.flush()
+
+
+    describe "$clearActives", ->
+        it "clears the active cache", (done) ->
+            data1 =
+                _status: 'OK'
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipDoc('test', 12346)
+            inst.$get().then ->
+                assert.equal flipCache._actives.length, 1
+                flipDoc.clearActives()
+                assert.equal flipCache._actives.length, 0
+                done()
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data1)
             http.flush()

@@ -5,7 +5,7 @@ angular.module 'flipList', [
 
 .factory 'flipList', ($q, flipCache, flipDoc) ->
 
-    (config) ->
+    tmp = (config) ->
         flipList = []
         flipList.collection = config.collection
         flipList.filter = config.filter || {}
@@ -19,6 +19,7 @@ angular.module 'flipList', [
                 .then (docs) ->
                     flipList.splice(0, flipList.length)
                     flipList.push(flipDoc(flipList.collection, x)) for x in docs
+                    flipCache.addActive flipList
                     resolve(flipList)
                 .catch (err) -> reject(err)
 
@@ -29,3 +30,6 @@ angular.module 'flipList', [
             flipCache.addActive(flipList)
         
         return flipList
+    
+    tmp.$clearActives = -> flipCache.clearActives()
+    return tmp
