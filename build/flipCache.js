@@ -397,6 +397,14 @@
       };
 
       DbCache.prototype.addActive = function(val) {
+        var a, i, len, ref;
+        ref = this._actives;
+        for (i = 0, len = ref.length; i < len; i++) {
+          a = ref[i];
+          if (a === val) {
+            return;
+          }
+        }
         return this._actives.push(val);
       };
 

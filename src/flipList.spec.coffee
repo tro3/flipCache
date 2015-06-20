@@ -57,7 +57,9 @@ describe "flipList", ->
             assert.equal flipCache._actives.length, 0
             inst.$get().then ->
                 assert.equal flipCache._actives.length, 1
-                done()
+                inst.$get().then ->
+                    assert.equal flipCache._actives.length, 1
+                    done()
             http.expectGET("/api/test").respond(200, data)
             http.flush()
 

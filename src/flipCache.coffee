@@ -321,6 +321,8 @@ angular.module 'flipCache', [
             @_actives = [val]
         
         addActive: (val) ->
+            for a in @_actives
+                return if a == val
             @_actives.push val
         
         clearActives: () ->
