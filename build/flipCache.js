@@ -500,7 +500,7 @@
           return function(resolve, reject) {
             return flipCache.remove(_this._collection, _this).then(function(doc) {
               _this._clear();
-              return resolve(_this);
+              return resolve();
             })["catch"](function(err) {
               return reject(err);
             });

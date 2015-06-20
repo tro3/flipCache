@@ -31,24 +31,24 @@ angular.module 'flipDoc', [
         $get:  () ->
             $q (resolve, reject) =>
                 flipCache.findOne(@_collection, {_id:@_id})
-                .then (doc) => @_extend(doc); resolve(this)
+                .then (doc) => @_extend(doc); resolve(@)
                 .catch (err) -> reject(err)
 
         $save:  () ->
             $q (resolve, reject) =>
                 if @_id
                     flipCache.update(@_collection, @)
-                    .then (doc) => @_extend(doc); resolve(this)
+                    .then (doc) => @_extend(doc); resolve(@)
                     .catch (err) -> reject(err)
                 else
                     flipCache.insert(@_collection, @)
-                    .then (doc) => @_extend(doc); resolve(this)
+                    .then (doc) => @_extend(doc); resolve(@)
                     .catch (err) -> reject(err)
 
         $delete:  () ->
             $q (resolve, reject) =>
                 flipCache.remove(@_collection, @)
-                .then (doc) => @_clear(); resolve(this)
+                .then (doc) => @_clear(); resolve()
                 .catch (err) -> reject(err)
 
         $setActive: ->

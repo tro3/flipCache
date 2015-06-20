@@ -37,6 +37,18 @@ describe "flipDoc", ->
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
 
+        it "resolves simple doc query as doc", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipDoc('test', 12346)
+            inst.$get().then (doc) ->
+                assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                done()
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.flush()
+
         it "only queries db once for two retrievals", (done) ->
             data =
                 _status: 'OK'
@@ -65,6 +77,17 @@ describe "flipDoc", ->
             http.expectPOST("/api/test", {_id:null, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()
 
+        it "resolves for new object as the object", (done) ->
+            data =
+                _status: 'OK'
+                _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+            inst = flipDoc('test', {name:'Bob'})
+            inst.$save().then (doc) ->
+                assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                done()
+            http.expectPOST("/api/test", {_id:null, _collection:'test', name:'Bob'}).respond(200, data)
+            http.flush()
+
         it "sends PUT api call for existing object and updates it", (done) ->
             data =
                 _status: 'OK'
@@ -72,6 +95,17 @@ describe "flipDoc", ->
             inst = flipDoc('test', {_id:12346, name:'Bob'})
             inst.$save().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                done()
+            http.expectPUT("/api/test/12346", {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
+            http.flush()
+
+        it "resolves for existing object as the object", (done) ->
+            data =
+                _status: 'OK'
+                _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+            inst = flipDoc('test', {_id:12346, name:'Bob'})
+            inst.$save().then (doc) ->
+                assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 done()
             http.expectPUT("/api/test/12346", {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()

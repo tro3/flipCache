@@ -43,6 +43,20 @@ describe "flipList", ->
             http.expectGET("/api/test").respond(200, data)
             http.flush()
 
+        it "resolves as document", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$get().then (doc) ->
+                assertListEqual doc, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                done()
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
         it "returns simple query", (done) ->
             data =
                 _status: 'OK'
