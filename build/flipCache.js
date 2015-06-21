@@ -163,12 +163,15 @@
           return function(data) {
             switch (data.action) {
               case 'create':
-                return _this._resetList(data.collection);
+                _this._resetList(data.collection);
+                break;
               case 'delete':
-                return _this._resetList(data.collection);
+                _this._resetList(data.collection);
+                break;
               case 'edit':
-                return _this._resetDoc(data.collection, data.id);
+                _this._resetDoc(data.collection, data.id);
             }
+            return $rootScope.$broadcast('socketEvent', data);
           };
         })(this));
       }

@@ -168,7 +168,7 @@ angular.module 'flipCache', [
                     when 'create' then @_resetList(data.collection)
                     when 'delete' then @_resetList(data.collection)
                     when 'edit'   then @_resetDoc(data.collection, data.id)
-                $rootScope.broadcast 'socketEvent', data
+                $rootScope.$broadcast 'socketEvent', data
 
 
 
