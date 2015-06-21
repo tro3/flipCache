@@ -1,7 +1,7 @@
 angular.module 'flipCache', [
 ]
 
-.factory 'flipCache', ($http, $q) ->
+.factory 'flipCache', ($http, $q, $rootScope) ->
 
     p = console.log
 
@@ -168,6 +168,7 @@ angular.module 'flipCache', [
                     when 'create' then @_resetList(data.collection)
                     when 'delete' then @_resetList(data.collection)
                     when 'edit'   then @_resetDoc(data.collection, data.id)
+                $rootScope.broadcast 'socketEvent', data
 
 
 
@@ -318,15 +319,16 @@ angular.module 'flipCache', [
 
 
         setActive: (val) ->
-            @_actives = [val]
+            @clearActives()
+            @addActive(val)
         
         addActive: (val) ->
             for a in @_actives
                 return if a == val
             @_actives.push val
-        
+
         clearActives: () ->
-            @_actives = []
+            @_actives.splice(0)
 
 
     new DbCache

@@ -1,5 +1,5 @@
 (function() {
-  angular.module('flipCache', []).factory('flipCache', ["$http", "$q", function($http, $q) {
+  angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", function($http, $q, $rootScope) {
     var DbCache, deepcopy, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
     hashQuery = function(query, options) {
@@ -393,7 +393,8 @@
       };
 
       DbCache.prototype.setActive = function(val) {
-        return this._actives = [val];
+        this.clearActives();
+        return this.addActive(val);
       };
 
       DbCache.prototype.addActive = function(val) {
@@ -409,7 +410,7 @@
       };
 
       DbCache.prototype.clearActives = function() {
-        return this._actives = [];
+        return this._actives.splice(0);
       };
 
       return DbCache;
@@ -473,7 +474,6 @@
               _id: _this._id
             }).then(function(doc) {
               _this._extend(doc);
-              flipCache.addActive(_this);
               return resolve(_this);
             })["catch"](function(err) {
               return reject(err);
@@ -558,7 +558,6 @@
               x = docs[i];
               flipList.push(flipDoc(flipList.collection, x));
             }
-            flipCache.addActive(flipList);
             return resolve(flipList);
           })["catch"](function(err) {
             return reject(err);

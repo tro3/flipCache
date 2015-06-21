@@ -31,10 +31,7 @@ angular.module 'flipDoc', [
         $get:  () ->
             $q (resolve, reject) =>
                 flipCache.findOne(@_collection, {_id:@_id})
-                .then (doc) =>
-                    @_extend(doc)
-                    flipCache.addActive(@)
-                    resolve(@)
+                .then (doc) => @_extend(doc); resolve(@)
                 .catch (err) -> reject(err)
 
         $save:  () ->

@@ -46,23 +46,6 @@ describe "flipList", ->
             http.expectGET("/api/test").respond(200, data)
             http.flush()
 
-        it "adds collection to active", (done) ->
-            data =
-                _status: 'OK'
-                _auth: true
-                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
-            inst = flipList(
-                collection: 'test'
-            )
-            assert.equal flipCache._actives.length, 0
-            inst.$get().then ->
-                assert.equal flipCache._actives.length, 1
-                inst.$get().then ->
-                    assert.equal flipCache._actives.length, 1
-                    done()
-            http.expectGET("/api/test").respond(200, data)
-            http.flush()
-
         it "resolves as document", (done) ->
             data =
                 _status: 'OK'
@@ -118,6 +101,7 @@ describe "flipList", ->
             inst = flipList(
                 collection: 'test'
             )
+            inst.$setActive()
             inst.$get().then ->
                 assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
                 Primus.fire 'data', {action:'create', collection:'test', id:1}
@@ -135,6 +119,7 @@ describe "flipList", ->
             inst = flipList(
                 collection: 'test'
             )
+            inst.$setActive()
             inst.$get().then ->
                 assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
                 Primus.fire 'data', {action:'create', collection:'test2', id:1}
@@ -177,6 +162,7 @@ describe "flipList", ->
             inst = flipList(
                 collection: 'test'
             )
+            inst.$addActive()
             inst.$get().then ->
                 assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
                 Primus.fire 'data', {action:'create', collection:'test', id:1}
@@ -194,6 +180,7 @@ describe "flipList", ->
             inst = flipList(
                 collection: 'test'
             )
+            inst.$addActive()
             inst.$get().then ->
                 assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
                 Primus.fire 'data', {action:'create', collection:'test2', id:1}
@@ -214,6 +201,8 @@ describe "flipList", ->
                 collection: 'test'
                 filter: {name:'Bob'}
             )
+            inst.$addActive()
+            inst2.$addActive()
             inst.$get()
             .then -> inst2.$get()
             .then -> Primus.fire 'data', {action:'create', collection:'test', id:1}
@@ -233,6 +222,7 @@ describe "flipList", ->
             inst = flipList(
                 collection: 'test'
             )
+            inst.$setActive()
             inst.$get().then ->
                 assert.equal flipCache._actives.length, 1
                 flipList.$clearActives()

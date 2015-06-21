@@ -19,7 +19,6 @@ angular.module 'flipList', [
                 .then (docs) ->
                     flipList.splice(0, flipList.length)
                     flipList.push(flipDoc(flipList.collection, x)) for x in docs
-                    flipCache.addActive flipList
                     resolve(flipList)
                 .catch (err) -> reject(err)
 
