@@ -296,11 +296,8 @@ angular.module 'flipCache', [
 
         insert: (collection, doc) ->
             @_setupCache(collection)
-            doc._tid = getRandInt(1e9)
-            @_tids.push doc._tid
             qPost(collection, doc)
             .then (resp) =>
-                delete doc._tid
                 @_cacheDoc(collection, resp._item)
                 return resp._item
             .catch (err) ->

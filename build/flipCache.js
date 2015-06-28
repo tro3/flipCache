@@ -365,11 +365,8 @@
 
       DbCache.prototype.insert = function(collection, doc) {
         this._setupCache(collection);
-        doc._tid = getRandInt(1e9);
-        this._tids.push(doc._tid);
         return qPost(collection, doc).then((function(_this) {
           return function(resp) {
-            delete doc._tid;
             _this._cacheDoc(collection, resp._item);
             return resp._item;
           };
