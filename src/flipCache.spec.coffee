@@ -121,6 +121,26 @@ describe "flipCache", ->
             http.expectPUT("/api/test/12346", data).respond(200, respData)
             http.flush()
 
+        it "ignores primus event with same tid", (done) ->
+            data = {_id:12346, name:'Bob'}
+            respData =
+                _status: 'OK'
+                _tid: '123'
+                _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+            cache.update('test', data).then (resp) ->
+                assert.deepEqual resp, respData._item
+                cache.findOne('test', {_id:12346})
+            .then (data2) ->
+                assert.deepEqual data2, respData._item
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid:'123'}
+            .then ->
+                cache.findOne('test', {_id:12346})
+            .then (data2) ->
+                assert.deepEqual data2, respData._item
+                done()
+            http.expectPUT("/api/test/12346", data).respond(200, respData)
+            http.flush()
+
 
     describe "delete", ->
         it "sends proper API call and invalidates cache of item", (done) ->
@@ -311,7 +331,7 @@ describe "flipCache", ->
                 cache.findOne('test', {_id:12346})
             .then (doc) ->
                 assert.equal doc._id, 12346
-                Primus.fire 'data', {action:'edit', collection:'test', id:12346}
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid:'123'}
                 cache.findOne('test', {_id:12346})
             .then (doc) ->
                 assert.equal doc._id, 12346

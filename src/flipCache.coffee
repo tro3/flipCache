@@ -161,14 +161,18 @@ angular.module 'flipCache', [
             @_listCache = {}
             @_docCache = {}
             @_actives = []
+            @_tids = []
 
             primus = Primus.connect()
             primus.on 'data', (data) =>
-                switch data.action
-                    when 'create' then @_resetList(data.collection)
-                    when 'delete' then @_resetList(data.collection)
-                    when 'edit'   then @_resetDoc(data.collection, data.id)
-                $rootScope.$broadcast 'socketEvent', data
+                if data.tid in @_tids
+                    @_tids.splice(@_tids.indexOf(data.tid),1)
+                else
+                    switch data.action
+                        when 'create' then @_resetList(data.collection)
+                        when 'delete' then @_resetList(data.collection)
+                        when 'edit'   then @_resetDoc(data.collection, data.id)
+                    $rootScope.$broadcast 'socketEvent', data
 
 
 
@@ -242,12 +246,14 @@ angular.module 'flipCache', [
     
         _resetDoc: (collection, id) ->
             @invalidateDoc(collection, id)
+            @_refreshActivesDoc(collection, id)
+
+        _refreshActivesDoc: (collection, id) ->
             @_actives.forEach (active) ->
                 if '_collection' of active and \
                   active._collection == collection and \
                   active._id == id
                     active.$get()
-
 
 
         invalidateDoc: (collection, id) ->
@@ -303,6 +309,8 @@ angular.module 'flipCache', [
             qPut(collection, doc)
             .then (resp) =>
                 @_cacheDoc(collection, resp._item)
+                @_tids.push resp._tid
+                @_refreshActivesDoc(collection, resp._item._id)
                 return resp._item
             .catch (err) ->
                 throw err

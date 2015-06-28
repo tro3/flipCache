@@ -22,13 +22,13 @@ angular.module 'flipList', [
                     resolve(flipList)
                 .catch (err) -> reject(err)
 
-        flipList.$setActive = ->
+        flipList.setActive = ->
             flipCache.setActive(flipList)
 
-        flipList.$addActive = ->
+        flipList.addActive = ->
             flipCache.addActive(flipList)
         
         return flipList
     
-    tmp.$clearActives = -> flipCache.clearActives()
+    tmp.clearActives = -> flipCache.clearActives()
     return tmp

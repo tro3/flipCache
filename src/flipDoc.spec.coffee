@@ -126,13 +126,13 @@ describe "flipDoc", ->
             http.flush()
 
 
-    describe "$setActive", ->
+    describe "setActive", ->
         it "causes doc to be refreshed when primus event hits", (done) ->
             data =
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$setActive()
+            inst.setActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:12346}
@@ -147,7 +147,7 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$setActive()
+            inst.setActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:123}
@@ -165,25 +165,25 @@ describe "flipDoc", ->
                 _items: [{_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst1 = flipDoc('test', 12346)
             inst2 = flipDoc('test', 12347) # Note that we did not $get, so docs are not active
-            inst1.$setActive()
-            inst2.$setActive()
+            inst1.setActive()
+            inst2.setActive()
             Primus.fire 'data', {action:'edit', collection:'test', id:12346}
             .then ->
                 done()
             http.flush()
 
 
-    describe "$addActive", ->
+    describe "addActive", ->
         it "causes doc to be refreshed when primus event hits", (done) ->
             data =
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$addActive()
+            inst.addActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:12346}
-            .then ->
+            .finally ->
                 done()
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
@@ -194,7 +194,7 @@ describe "flipDoc", ->
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$addActive()
+            inst.addActive()
             inst.$get().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 Primus.fire 'data', {action:'edit', collection:'test', id:123}
@@ -212,8 +212,8 @@ describe "flipDoc", ->
                 _items: [{_id:12347, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst1 = flipDoc('test', 12346)
             inst2 = flipDoc('test', 12347) # Note that we did not $get, so docs are not active
-            inst1.$addActive()
-            inst2.$addActive()
+            inst1.addActive()
+            inst2.addActive()
             Primus.fire 'data', {action:'edit', collection:'test', id:12346}
             .then ->
                 Primus.fire 'data', {action:'edit', collection:'test', id:12347}
@@ -224,13 +224,13 @@ describe "flipDoc", ->
             http.flush()
 
 
-    describe "$clearActives", ->
+    describe "clearActives", ->
         it "clears the active cache", (done) ->
             data1 =
                 _status: 'OK'
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             inst = flipDoc('test', 12346)
-            inst.$setActive()
+            inst.setActive()
             inst.$get().then ->
                 assert.equal flipCache._actives.length, 1
                 flipDoc.clearActives()

@@ -1,4 +1,6 @@
 (function() {
+  var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
   angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", function($http, $q, $rootScope) {
     var DbCache, deepcopy, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
@@ -158,20 +160,26 @@
         this._listCache = {};
         this._docCache = {};
         this._actives = [];
+        this._tids = [];
         primus = Primus.connect();
         primus.on('data', (function(_this) {
           return function(data) {
-            switch (data.action) {
-              case 'create':
-                _this._resetList(data.collection);
-                break;
-              case 'delete':
-                _this._resetList(data.collection);
-                break;
-              case 'edit':
-                _this._resetDoc(data.collection, data.id);
+            var ref;
+            if (ref = data.tid, indexOf.call(_this._tids, ref) >= 0) {
+              return _this._tids.splice(_this._tids.indexOf(data.tid), 1);
+            } else {
+              switch (data.action) {
+                case 'create':
+                  _this._resetList(data.collection);
+                  break;
+                case 'delete':
+                  _this._resetList(data.collection);
+                  break;
+                case 'edit':
+                  _this._resetDoc(data.collection, data.id);
+              }
+              return $rootScope.$broadcast('socketEvent', data);
             }
-            return $rootScope.$broadcast('socketEvent', data);
           };
         })(this));
       }
@@ -271,6 +279,10 @@
 
       DbCache.prototype._resetDoc = function(collection, id) {
         this.invalidateDoc(collection, id);
+        return this._refreshActivesDoc(collection, id);
+      };
+
+      DbCache.prototype._refreshActivesDoc = function(collection, id) {
         return this._actives.forEach(function(active) {
           if ('_collection' in active && active._collection === collection && active._id === id) {
             return active.$get();
@@ -376,6 +388,8 @@
         return qPut(collection, doc).then((function(_this) {
           return function(resp) {
             _this._cacheDoc(collection, resp._item);
+            _this._tids.push(resp._tid);
+            _this._refreshActivesDoc(collection, resp._item._id);
             return resp._item;
           };
         })(this))["catch"](function(err) {
@@ -520,11 +534,11 @@
         })(this));
       };
 
-      FlipDoc.prototype.$setActive = function() {
+      FlipDoc.prototype.setActive = function() {
         return flipCache.setActive(this);
       };
 
-      FlipDoc.prototype.$addActive = function() {
+      FlipDoc.prototype.addActive = function() {
         return flipCache.addActive(this);
       };
 
@@ -567,15 +581,15 @@
           });
         });
       };
-      flipList.$setActive = function() {
+      flipList.setActive = function() {
         return flipCache.setActive(flipList);
       };
-      flipList.$addActive = function() {
+      flipList.addActive = function() {
         return flipCache.addActive(flipList);
       };
       return flipList;
     };
-    tmp.$clearActives = function() {
+    tmp.clearActives = function() {
       return flipCache.clearActives();
     };
     return tmp;
