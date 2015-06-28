@@ -165,7 +165,7 @@
         primus.on('data', (function(_this) {
           return function(data) {
             var ref;
-            if (ref = data.tid, indexOf.call(_this._tids, ref) >= 0) {
+            if ((ref = data.tid, indexOf.call(_this._tids, ref) >= 0) && data.action === 'edit') {
               return _this._tids.splice(_this._tids.indexOf(data.tid), 1);
             } else {
               switch (data.action) {
