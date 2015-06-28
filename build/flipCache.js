@@ -1,6 +1,6 @@
 (function() {
   angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", function($http, $q, $rootScope) {
-    var DbCache, deepcopy, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
+    var DbCache, deepcopy, getRandInt, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
     hashQuery = function(query, options) {
       if (query == null) {
@@ -25,6 +25,9 @@
         query = {};
       }
       return Object.keys(query).length === 1 && Object.keys(query)[0] === '_id' && typeof query._id === 'number';
+    };
+    getRandInt = function(max) {
+      return Math.floor(Math.random() * max);
     };
     deepcopy = function(obj) {
       var key, result, val, x;
@@ -158,6 +161,7 @@
         this._listCache = {};
         this._docCache = {};
         this._actives = [];
+        this._tids = [];
         primus = Primus.connect();
         primus.on('data', (function(_this) {
           return function(data) {
@@ -361,8 +365,11 @@
 
       DbCache.prototype.insert = function(collection, doc) {
         this._setupCache(collection);
+        doc._tid = getRandInt(1e9);
+        this._tids.push(doc._tid);
         return qPost(collection, doc).then((function(_this) {
           return function(resp) {
+            delete doc._tid;
             _this._cacheDoc(collection, resp._item);
             return resp._item;
           };
@@ -373,8 +380,11 @@
 
       DbCache.prototype.update = function(collection, doc) {
         this._setupCache(collection);
+        doc._tid = getRandInt(1e9);
+        this._tids.push(doc._tid);
         return qPut(collection, doc).then((function(_this) {
           return function(resp) {
+            delete doc._tid;
             _this._cacheDoc(collection, resp._item);
             return resp._item;
           };

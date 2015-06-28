@@ -26,6 +26,14 @@ describe "flipDoc", ->
             else
                 assert.equal dut[key], val
 
+    assertBody = (exp) ->
+        (data) ->
+            body = JSON.parse(data)
+            assert.property body, '_tid'
+            delete body._tid
+            assert.deepEqual body, exp
+            true
+
 
     describe "$get", ->
         it "returns simple doc query", (done) ->
@@ -77,7 +85,7 @@ describe "flipDoc", ->
             inst.$save().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 done()
-            http.expectPOST("/api/test", {_id:null, _collection:'test', name:'Bob'}).respond(200, data)
+            http.expectPOST("/api/test", assertBody {_id:null, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()
 
         it "resolves for new object as the object", (done) ->
@@ -88,7 +96,7 @@ describe "flipDoc", ->
             inst.$save().then (doc) ->
                 assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 done()
-            http.expectPOST("/api/test", {_id:null, _collection:'test', name:'Bob'}).respond(200, data)
+            http.expectPOST("/api/test", assertBody {_id:null, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()
 
         it "sends PUT api call for existing object and updates it", (done) ->
@@ -99,7 +107,7 @@ describe "flipDoc", ->
             inst.$save().then ->
                 assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 done()
-            http.expectPUT("/api/test/12346", {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
+            http.expectPUT("/api/test/12346", assertBody {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()
 
         it "resolves for existing object as the object", (done) ->
@@ -110,7 +118,7 @@ describe "flipDoc", ->
             inst.$save().then (doc) ->
                 assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
                 done()
-            http.expectPUT("/api/test/12346", {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
+            http.expectPUT("/api/test/12346", assertBody {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()
 
 

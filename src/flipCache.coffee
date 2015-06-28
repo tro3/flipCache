@@ -19,6 +19,11 @@ angular.module 'flipCache', [
             && Object.keys(query)[0] == '_id' \
             && typeof(query._id) == 'number'
 
+
+    getRandInt = (max) ->
+        Math.floor(Math.random()*max)
+
+
     deepcopy = (obj) ->
         if typeof obj != 'object'
             return obj
@@ -161,6 +166,7 @@ angular.module 'flipCache', [
             @_listCache = {}
             @_docCache = {}
             @_actives = []
+            @_tids = []
 
             primus = Primus.connect()
             primus.on 'data', (data) =>
@@ -290,8 +296,11 @@ angular.module 'flipCache', [
 
         insert: (collection, doc) ->
             @_setupCache(collection)
+            doc._tid = getRandInt(1e9)
+            @_tids.push doc._tid
             qPost(collection, doc)
             .then (resp) =>
+                delete doc._tid
                 @_cacheDoc(collection, resp._item)
                 return resp._item
             .catch (err) ->
@@ -300,8 +309,11 @@ angular.module 'flipCache', [
 
         update: (collection, doc) ->
             @_setupCache(collection)
+            doc._tid = getRandInt(1e9)
+            @_tids.push doc._tid
             qPut(collection, doc)
             .then (resp) =>
+                delete doc._tid
                 @_cacheDoc(collection, resp._item)
                 return resp._item
             .catch (err) ->
