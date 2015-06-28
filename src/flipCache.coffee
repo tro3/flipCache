@@ -165,7 +165,7 @@ angular.module 'flipCache', [
 
             primus = Primus.connect()
             primus.on 'data', (data) =>
-                if data.tid in @_tids
+                if data.tid in @_tids and data.action == 'edit'
                     @_tids.splice(@_tids.indexOf(data.tid),1)
                 else
                     switch data.action
