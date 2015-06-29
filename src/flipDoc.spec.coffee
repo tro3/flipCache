@@ -121,6 +121,24 @@ describe "flipDoc", ->
             http.expectPUT("/api/test/12346", assertBody {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
             http.flush()
 
+        it "ignores follow-on primus event for update", (done) ->
+            data =
+                _status: 'OK'
+                _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+            inst = flipDoc('test', {_id:12346, name:'Bob'})
+            inst.$save()
+            .then (doc) ->
+                assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid: flipCache._tids[0]}
+            .then ->
+                assert.equal flipCache._tids.length, 0
+                inst.$get()
+            .then (doc) ->
+                assertEqual doc, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}                
+                done()
+            http.expectPUT("/api/test/12346", assertBody {_id:12346, _collection:'test', name:'Bob'}).respond(200, data)
+            http.flush()
+
 
     describe "$delete", ->
         it "sends DELETE api call for new object and clears it of data", (done) ->

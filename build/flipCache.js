@@ -1,4 +1,6 @@
 (function() {
+  var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
   angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", function($http, $q, $rootScope) {
     var DbCache, deepcopy, getRandInt, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
@@ -165,17 +167,22 @@
         primus = Primus.connect();
         primus.on('data', (function(_this) {
           return function(data) {
-            switch (data.action) {
-              case 'create':
-                _this._resetList(data.collection);
-                break;
-              case 'delete':
-                _this._resetList(data.collection);
-                break;
-              case 'edit':
-                _this._resetDoc(data.collection, data.id);
+            var ref;
+            if (data.action === 'edit' && 'tid' in data && (ref = data.tid, indexOf.call(_this._tids, ref) >= 0)) {
+              return _this._tids.splice(_this._tids.indexOf(data.tid), 1);
+            } else {
+              switch (data.action) {
+                case 'create':
+                  _this._resetList(data.collection);
+                  break;
+                case 'delete':
+                  _this._resetList(data.collection);
+                  break;
+                case 'edit':
+                  _this._resetDoc(data.collection, data.id);
+              }
+              return $rootScope.$broadcast('socketEvent', data);
             }
-            return $rootScope.$broadcast('socketEvent', data);
           };
         })(this));
       }

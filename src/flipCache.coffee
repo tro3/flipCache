@@ -170,11 +170,14 @@ angular.module 'flipCache', [
 
             primus = Primus.connect()
             primus.on 'data', (data) =>
-                switch data.action
-                    when 'create' then @_resetList(data.collection)
-                    when 'delete' then @_resetList(data.collection)
-                    when 'edit'   then @_resetDoc(data.collection, data.id)
-                $rootScope.$broadcast 'socketEvent', data
+                if data.action=='edit' and 'tid' of data and data.tid in @_tids
+                    @_tids.splice(@_tids.indexOf(data.tid),1)
+                else
+                    switch data.action
+                        when 'create' then @_resetList(data.collection)
+                        when 'delete' then @_resetList(data.collection)
+                        when 'edit'   then @_resetDoc(data.collection, data.id)
+                    $rootScope.$broadcast 'socketEvent', data
 
 
 
