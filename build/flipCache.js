@@ -282,6 +282,10 @@
 
       DbCache.prototype._resetDoc = function(collection, id) {
         this.invalidateDoc(collection, id);
+        return this.checkActivesDoc(collection, id);
+      };
+
+      DbCache.prototype.checkActivesDoc = function(collection, id) {
         return this._actives.forEach(function(active) {
           if ('_collection' in active && active._collection === collection && active._id === id) {
             return active.$get();
@@ -390,6 +394,7 @@
           return function(resp) {
             delete doc._tid;
             _this._cacheDoc(collection, resp._item);
+            _this.checkActivesDoc(collection, doc._id);
             return resp._item;
           };
         })(this))["catch"](function(err) {

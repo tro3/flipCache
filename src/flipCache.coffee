@@ -251,6 +251,9 @@ angular.module 'flipCache', [
     
         _resetDoc: (collection, id) ->
             @invalidateDoc(collection, id)
+            @checkActivesDoc(collection, id)
+            
+        checkActivesDoc: (collection, id) ->
             @_actives.forEach (active) ->
                 if '_collection' of active and \
                   active._collection == collection and \
@@ -315,6 +318,7 @@ angular.module 'flipCache', [
             .then (resp) =>
                 delete doc._tid
                 @_cacheDoc(collection, resp._item)
+                @checkActivesDoc(collection, doc._id)
                 return resp._item
             .catch (err) ->
                 throw err
