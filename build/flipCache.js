@@ -534,11 +534,11 @@
         })(this));
       };
 
-      FlipDoc.prototype.$setActive = function() {
+      FlipDoc.prototype.setActive = function() {
         return flipCache.setActive(this);
       };
 
-      FlipDoc.prototype.$addActive = function() {
+      FlipDoc.prototype.addActive = function() {
         return flipCache.addActive(this);
       };
 
@@ -581,15 +581,15 @@
           });
         });
       };
-      flipList.$setActive = function() {
+      flipList.setActive = function() {
         return flipCache.setActive(flipList);
       };
-      flipList.$addActive = function() {
+      flipList.addActive = function() {
         return flipCache.addActive(flipList);
       };
       return flipList;
     };
-    tmp.$clearActives = function() {
+    tmp.clearActives = function() {
       return flipCache.clearActives();
     };
     return tmp;

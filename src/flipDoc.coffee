@@ -51,10 +51,10 @@ angular.module 'flipDoc', [
                 .then (doc) => @_clear(); resolve()
                 .catch (err) -> reject(err)
 
-        $setActive: ->
+        setActive: ->
             flipCache.setActive(@)
 
-        $addActive: ->
+        addActive: ->
             flipCache.addActive(@)
             
 
