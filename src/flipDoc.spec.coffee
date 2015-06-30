@@ -12,6 +12,9 @@ describe "flipDoc", ->
             flipDoc = _flipDoc_
             flipCache = _flipCache_
             http = $httpBackend
+        inject ($rootScope) ->
+            $rootScope.$on 'activeChange', (event, doc) ->
+                doc.$get()
 
     afterEach ->
         http.verifyNoOutstandingExpectation()
@@ -152,7 +155,7 @@ describe "flipDoc", ->
             http.flush()
 
 
-    describe "setActive", ->
+    describe "setActive", ->        
         it "causes doc to be refreshed when primus event hits", (done) ->
             data =
                 _status: 'OK'

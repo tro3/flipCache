@@ -177,7 +177,7 @@ angular.module 'flipCache', [
                         when 'create' then @_resetList(data.collection)
                         when 'delete' then @_resetList(data.collection)
                         when 'edit'   then @_resetDoc(data.collection, data.id)
-                    $rootScope.$broadcast 'socketEvent', data
+                $rootScope.$broadcast 'socketEvent', data
 
 
 
@@ -243,11 +243,15 @@ angular.module 'flipCache', [
             @_docCache[collection][doc._id][hashF] = doc
             return @_docCache[collection][doc._id]
 
+
         _resetList: (collection) ->
             @invalidateLists(collection)
+            @checkActivesList(collection)
+
+        checkActivesList: (collection, id) ->
             @_actives.forEach (active) ->
                 if 'collection' of active and active.collection == collection
-                    active.$get()
+                    $rootScope.$broadcast 'activeChange', active
     
         _resetDoc: (collection, id) ->
             @invalidateDoc(collection, id)
@@ -255,10 +259,10 @@ angular.module 'flipCache', [
             
         checkActivesDoc: (collection, id) ->
             @_actives.forEach (active) ->
-                if '_collection' of active and \
+                if '_collection' of active and         \
                   active._collection == collection and \
                   active._id == id
-                    active.$get()
+                    $rootScope.$broadcast 'activeChange', active
 
 
 

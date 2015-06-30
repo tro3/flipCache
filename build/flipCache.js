@@ -169,7 +169,7 @@
           return function(data) {
             var ref;
             if (data.action === 'edit' && 'tid' in data && (ref = data.tid, indexOf.call(_this._tids, ref) >= 0)) {
-              return _this._tids.splice(_this._tids.indexOf(data.tid), 1);
+              _this._tids.splice(_this._tids.indexOf(data.tid), 1);
             } else {
               switch (data.action) {
                 case 'create':
@@ -181,8 +181,8 @@
                 case 'edit':
                   _this._resetDoc(data.collection, data.id);
               }
-              return $rootScope.$broadcast('socketEvent', data);
             }
+            return $rootScope.$broadcast('socketEvent', data);
           };
         })(this));
       }
@@ -273,9 +273,13 @@
 
       DbCache.prototype._resetList = function(collection) {
         this.invalidateLists(collection);
+        return this.checkActivesList(collection);
+      };
+
+      DbCache.prototype.checkActivesList = function(collection, id) {
         return this._actives.forEach(function(active) {
           if ('collection' in active && active.collection === collection) {
-            return active.$get();
+            return $rootScope.$broadcast('activeChange', active);
           }
         });
       };
@@ -288,7 +292,7 @@
       DbCache.prototype.checkActivesDoc = function(collection, id) {
         return this._actives.forEach(function(active) {
           if ('_collection' in active && active._collection === collection && active._id === id) {
-            return active.$get();
+            return $rootScope.$broadcast('activeChange', active);
           }
         });
       };

@@ -12,6 +12,9 @@ describe "flipList", ->
             flipList = _flipList_
             flipCache = _flipCache_
             http = $httpBackend
+        inject ($rootScope) ->
+            $rootScope.$on 'activeChange', (event, doc) ->
+                doc.$get()
 
     afterEach ->
         http.verifyNoOutstandingExpectation()
