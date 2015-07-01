@@ -10,10 +10,14 @@ class PrimusMock
         q = null
         inject ($q) -> q = $q
         qs = []
-        @events[event].forEach (fn) =>
+        @events[event].forEach (fn) ->
             qs.push q (resolve, reject) ->
-                fn(data)
-                resolve()
+                try
+                    fn(data)
+                    resolve()
+                catch err
+                    console.log "Primus event handler error:", err
+                    reject(err)
         q.all(qs)
         
 
