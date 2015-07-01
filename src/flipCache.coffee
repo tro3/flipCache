@@ -118,7 +118,7 @@ angular.module 'flipCache', [
             ).success( (data, status, headers, config) ->
                 if angular.isDefined(data._status) \
                   and data._status == 'OK'
-                    resolve()
+                    resolve(data)
                 else
                     reject(data)
             ).error( (data, status, headers, config) ->
@@ -166,18 +166,22 @@ angular.module 'flipCache', [
             @_listCache = {}
             @_docCache = {}
             @_actives = []
-            @_tids = []
+            @tids = []
+            @qBusy = $q (resolve, reject) -> resolve()
 
             primus = Primus.connect()
             primus.on 'data', (data) =>
-                if data.action=='edit' and 'tid' of data and data.tid in @_tids
-                    @_tids.splice(@_tids.indexOf(data.tid),1)
-                else
-                    switch data.action
-                        when 'create' then @_resetList(data.collection)
-                        when 'delete' then @_resetList(data.collection)
-                        when 'edit'   then @_resetDoc(data.collection, data.id)
-                $rootScope.$broadcast 'socketEvent', data
+                @qBusy.then =>
+                    coll = data.collection
+                    if 'tid' of data and data.tid in @tids
+                        @tids.splice(@tids.indexOf(data.tid),1)
+                    else
+                        switch data.action
+                            when 'create' then @invalidateLists(coll)
+                            when 'delete' then @invalidateLists(coll)
+                            when 'edit'   then @invalidateDoc(coll, data.id)
+                        $rootScope.$broadcast 'cacheEvent', data
+                        $rootScope.$broadcast 'socketEvent', data
 
 
 
@@ -244,28 +248,6 @@ angular.module 'flipCache', [
             return @_docCache[collection][doc._id]
 
 
-        _resetList: (collection) ->
-            @invalidateLists(collection)
-            @checkActivesList(collection)
-
-        checkActivesList: (collection, id) ->
-            @_actives.forEach (active) ->
-                if 'collection' of active and active.collection == collection
-                    $rootScope.$broadcast 'activeChange', active
-    
-        _resetDoc: (collection, id) ->
-            @invalidateDoc(collection, id)
-            @checkActivesDoc(collection, id)
-            
-        checkActivesDoc: (collection, id) ->
-            @_actives.forEach (active) ->
-                if '_collection' of active and         \
-                  active._collection == collection and \
-                  active._id == id
-                    $rootScope.$broadcast 'activeChange', active
-
-
-
         invalidateDoc: (collection, id) ->
             @_setupCache(collection)
             if (id of @_docCache[collection])
@@ -305,37 +287,58 @@ angular.module 'flipCache', [
 
 
         insert: (collection, doc) ->
-            @_setupCache(collection)
-            qPost(collection, doc)
-            .then (resp) =>
-                @_cacheDoc(collection, resp._item)
-                return resp._item
-            .catch (err) ->
-                throw err
+            @qBusy = $q (resolve, reject) =>
+                @_setupCache(collection)
+                qPost(collection, doc)
+                .then (resp) =>
+                    tid = resp._tid
+                    @tids.push tid
+                    @_cacheDoc(collection, resp._item)
+                    @invalidateLists(collection)
+                    $rootScope.$broadcast 'cacheEvent',
+                        action: 'create'
+                        collection: collection
+                        id: resp._item._id
+                        tid: tid
+                    resolve resp._item
+                .catch (err) ->
+                    reject err
 
 
         update: (collection, doc) ->
-            @_setupCache(collection)
-            doc._tid = getRandInt(1e9)
-            @_tids.push doc._tid
-            qPut(collection, doc)
-            .then (resp) =>
-                delete doc._tid
-                @_cacheDoc(collection, resp._item)
-                @checkActivesDoc(collection, doc._id)
-                return resp._item
-            .catch (err) ->
-                throw err
+            @qBusy = $q (resolve, reject) =>
+                @_setupCache(collection)
+                qPut(collection, doc)
+                .then (resp) =>
+                    tid = resp._tid
+                    @tids.push tid
+                    @_cacheDoc(collection, resp._item)
+                    $rootScope.$broadcast 'cacheEvent',
+                        action: 'edit'
+                        collection: collection
+                        id: resp._item._id
+                        tid: tid
+                    resolve resp._item
+                .catch (err) ->
+                    reject err
 
 
         remove: (collection, doc) ->
-            @_setupCache(collection)
-            qDelete(collection, doc)
-            .then (resp) =>
-                @invalidateDoc(collection, doc._id)
-                null
-            .catch (err) ->
-                throw err
+            @qBusy = $q (resolve, reject) =>
+                @_setupCache(collection)
+                qDelete(collection, doc)
+                .then (resp) =>
+                    tid = resp._tid
+                    @tids.push tid
+                    @invalidateDoc(collection, doc._id)
+                    $rootScope.$broadcast 'cacheEvent',
+                        action: 'delete'
+                        collection: collection
+                        id: doc._id
+                        tid: tid
+                    resolve null
+                .catch (err) ->
+                    reject err
 
 
         setActive: (val) ->

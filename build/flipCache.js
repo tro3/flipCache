@@ -144,7 +144,7 @@
           url: url
         }).success(function(data, status, headers, config) {
           if (angular.isDefined(data._status) && data._status === 'OK') {
-            return resolve();
+            return resolve(data);
           } else {
             return reject(data);
           }
@@ -163,26 +163,33 @@
         this._listCache = {};
         this._docCache = {};
         this._actives = [];
-        this._tids = [];
+        this.tids = [];
+        this.qBusy = $q(function(resolve, reject) {
+          return resolve();
+        });
         primus = Primus.connect();
         primus.on('data', (function(_this) {
           return function(data) {
-            var ref;
-            if (data.action === 'edit' && 'tid' in data && (ref = data.tid, indexOf.call(_this._tids, ref) >= 0)) {
-              _this._tids.splice(_this._tids.indexOf(data.tid), 1);
-            } else {
-              switch (data.action) {
-                case 'create':
-                  _this._resetList(data.collection);
-                  break;
-                case 'delete':
-                  _this._resetList(data.collection);
-                  break;
-                case 'edit':
-                  _this._resetDoc(data.collection, data.id);
+            return _this.qBusy.then(function() {
+              var coll, ref;
+              coll = data.collection;
+              if ('tid' in data && (ref = data.tid, indexOf.call(_this.tids, ref) >= 0)) {
+                return _this.tids.splice(_this.tids.indexOf(data.tid), 1);
+              } else {
+                switch (data.action) {
+                  case 'create':
+                    _this.invalidateLists(coll);
+                    break;
+                  case 'delete':
+                    _this.invalidateLists(coll);
+                    break;
+                  case 'edit':
+                    _this.invalidateDoc(coll, data.id);
+                }
+                $rootScope.$broadcast('cacheEvent', data);
+                return $rootScope.$broadcast('socketEvent', data);
               }
-            }
-            return $rootScope.$broadcast('socketEvent', data);
+            });
           };
         })(this));
       }
@@ -271,32 +278,6 @@
         return this._docCache[collection][doc._id];
       };
 
-      DbCache.prototype._resetList = function(collection) {
-        this.invalidateLists(collection);
-        return this.checkActivesList(collection);
-      };
-
-      DbCache.prototype.checkActivesList = function(collection, id) {
-        return this._actives.forEach(function(active) {
-          if ('collection' in active && active.collection === collection) {
-            return $rootScope.$broadcast('activeChange', active);
-          }
-        });
-      };
-
-      DbCache.prototype._resetDoc = function(collection, id) {
-        this.invalidateDoc(collection, id);
-        return this.checkActivesDoc(collection, id);
-      };
-
-      DbCache.prototype.checkActivesDoc = function(collection, id) {
-        return this._actives.forEach(function(active) {
-          if ('_collection' in active && active._collection === collection && active._id === id) {
-            return $rootScope.$broadcast('activeChange', active);
-          }
-        });
-      };
-
       DbCache.prototype.invalidateDoc = function(collection, id) {
         this._setupCache(collection);
         if (id in this._docCache[collection]) {
@@ -379,43 +360,73 @@
       };
 
       DbCache.prototype.insert = function(collection, doc) {
-        this._setupCache(collection);
-        return qPost(collection, doc).then((function(_this) {
-          return function(resp) {
-            _this._cacheDoc(collection, resp._item);
-            return resp._item;
+        return this.qBusy = $q((function(_this) {
+          return function(resolve, reject) {
+            _this._setupCache(collection);
+            return qPost(collection, doc).then(function(resp) {
+              var tid;
+              tid = resp._tid;
+              _this.tids.push(tid);
+              _this._cacheDoc(collection, resp._item);
+              _this.invalidateLists(collection);
+              $rootScope.$broadcast('cacheEvent', {
+                action: 'create',
+                collection: collection,
+                id: resp._item._id,
+                tid: tid
+              });
+              return resolve(resp._item);
+            })["catch"](function(err) {
+              return reject(err);
+            });
           };
-        })(this))["catch"](function(err) {
-          throw err;
-        });
+        })(this));
       };
 
       DbCache.prototype.update = function(collection, doc) {
-        this._setupCache(collection);
-        doc._tid = getRandInt(1e9);
-        this._tids.push(doc._tid);
-        return qPut(collection, doc).then((function(_this) {
-          return function(resp) {
-            delete doc._tid;
-            _this._cacheDoc(collection, resp._item);
-            _this.checkActivesDoc(collection, doc._id);
-            return resp._item;
+        return this.qBusy = $q((function(_this) {
+          return function(resolve, reject) {
+            _this._setupCache(collection);
+            return qPut(collection, doc).then(function(resp) {
+              var tid;
+              tid = resp._tid;
+              _this.tids.push(tid);
+              _this._cacheDoc(collection, resp._item);
+              $rootScope.$broadcast('cacheEvent', {
+                action: 'edit',
+                collection: collection,
+                id: resp._item._id,
+                tid: tid
+              });
+              return resolve(resp._item);
+            })["catch"](function(err) {
+              return reject(err);
+            });
           };
-        })(this))["catch"](function(err) {
-          throw err;
-        });
+        })(this));
       };
 
       DbCache.prototype.remove = function(collection, doc) {
-        this._setupCache(collection);
-        return qDelete(collection, doc).then((function(_this) {
-          return function(resp) {
-            _this.invalidateDoc(collection, doc._id);
-            return null;
+        return this.qBusy = $q((function(_this) {
+          return function(resolve, reject) {
+            _this._setupCache(collection);
+            return qDelete(collection, doc).then(function(resp) {
+              var tid;
+              tid = resp._tid;
+              _this.tids.push(tid);
+              _this.invalidateDoc(collection, doc._id);
+              $rootScope.$broadcast('cacheEvent', {
+                action: 'delete',
+                collection: collection,
+                id: doc._id,
+                tid: tid
+              });
+              return resolve(null);
+            })["catch"](function(err) {
+              return reject(err);
+            });
           };
-        })(this))["catch"](function(err) {
-          throw err;
-        });
+        })(this));
       };
 
       DbCache.prototype.setActive = function(val) {

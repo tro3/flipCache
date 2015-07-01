@@ -57,5 +57,5 @@ module.exports = (grunt) ->
   grunt.registerTask('check', ['coffeelint'])
   grunt.registerTask('build', ['coffee', 'concat', 'clean', 'ngAnnotate', 'uglify'])
   
-  #grunt.registerTask('default', ['check', 'build', 'karma:single', 'watch'])
-  grunt.registerTask('default', ['check', 'build', 'karma:single'])
+  grunt.registerTask('default', ['check', 'build', 'karma:single', 'watch'])
+  #grunt.registerTask('default', ['check', 'build', 'karma:single'])

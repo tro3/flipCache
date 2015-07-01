@@ -3,6 +3,8 @@ p = console.log
 describe "flipCache", ->
     cache = null
     http = null
+    sEvents = null
+    cEvents = null
 
     beforeEach ->
         module('flipCache')
@@ -10,11 +12,21 @@ describe "flipCache", ->
             http = $httpBackend
             cache = flipCache
 
+        sEvents = []
+        cEvents = []
+        inject ($rootScope) ->
+            $rootScope.$on 'socketEvent', (event, data) ->
+                sEvents.push data
+            $rootScope.$on 'cacheEvent', (event, data) ->
+                cEvents.push data
+
+
+
     afterEach ->
         http.verifyNoOutstandingExpectation()
         http.verifyNoOutstandingRequest()
 
-
+            
     describe "find", ->
         it "returns simple list query, caching result", (done) ->
             data =
@@ -97,9 +109,18 @@ describe "flipCache", ->
             data = {name:'Bob'}
             respData =
                 _status: 'OK'
+                _tid: 2
                 _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
-            cache.insert('test', data).then (resp) ->
-                assert.deepEqual resp, respData._item
+            a = cache.insert('test', data)
+            b = Primus.fire 'data', {action:'create', collection:'test', id:12346, tid:2}            
+            b.then -> a.then (resp) ->
+                assert.equal sEvents.length, 0
+                assert.equal cEvents.length, 1
+                assert.deepEqual cEvents[0],
+                    action:'create'
+                    collection:'test'
+                    id:12346
+                    tid:2
                 cache.findOne('test', {_id:12346}).then (data2) ->
                     assert.deepEqual data2, respData._item
                     done()
@@ -112,14 +133,25 @@ describe "flipCache", ->
             data = {_id:12346, name:'Bob'}
             respData =
                 _status: 'OK'
+                _tid: 23
                 _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
-            cache.update('test', data).then (resp) ->
+            a = cache.update('test', data)
+            b = Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid:23}          
+            b.then -> a.then (resp) ->
                 assert.deepEqual resp, respData._item
+                assert.equal sEvents.length, 0
+                assert.equal cEvents.length, 1
+                assert.deepEqual cEvents[0],
+                    action:'edit'
+                    collection:'test'
+                    id:12346
+                    tid:23
                 cache.findOne('test', {_id:12346}).then (data2) ->
                     assert.deepEqual data2, respData._item
                     done()
             http.expectPUT("/api/test/12346", data).respond(200, respData)
             http.flush()
+
 
 
     describe "delete", ->
@@ -129,12 +161,22 @@ describe "flipCache", ->
                 _auth: true
                 _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
             cache.findOne('test', {name:'Bob'}).then (resp) ->
-                cache.remove('test', {_id:12346}).then (resp) ->
+                a = cache.remove('test', {_id:12346})
+                b = Primus.fire 'data', {action:'delete', collection:'test', id:12346, tid:234}          
+                b.then -> a.then (resp) ->
+                    p resp
                     assert.isNull resp
+                    assert.equal sEvents.length, 0
+                    assert.equal cEvents.length, 1
+                    assert.deepEqual cEvents[0],
+                        action:'delete'
+                        collection:'test'
+                        id:12346
+                        tid:234
                     cache.findOne('test', {_id:12346}).then (resp) ->
                         done()
             http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
-            http.expectDELETE("/api/test/12346").respond(200, {_status:"OK"})
+            http.expectDELETE("/api/test/12346").respond(200, {_status:"OK", _tid:234})
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
 
@@ -311,7 +353,8 @@ describe "flipCache", ->
                 cache.findOne('test', {_id:12346})
             .then (doc) ->
                 assert.equal doc._id, 12346
-                Primus.fire 'data', {action:'edit', collection:'test', id:12346}
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid:4}
+            .then ->
                 cache.findOne('test', {_id:12346})
             .then (doc) ->
                 assert.equal doc._id, 12346
@@ -334,7 +377,8 @@ describe "flipCache", ->
                 cache.findOne('test', {_id:12346})
             .then (doc) ->
                 assert.equal doc._id, 12346
-                Primus.fire 'data', {action:'edit', collection:'test', id:12346}
+                Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid:10}
+            .then ->
                 cache.find('test')
             .then (docs) ->
                 assert.equal docs[1]._id, 12346
@@ -391,6 +435,7 @@ describe "flipCache", ->
             .then (docs) ->
                 assert.equal docs[1]._id, 12346
                 Primus.fire 'data', {action:'create', collection:'test', id:1}
+            .then ->
                 cache.find('test')
             .then (docs) ->
                 assert.equal docs[1]._id, 12346
@@ -413,6 +458,7 @@ describe "flipCache", ->
             .then (doc) ->
                 assert.equal doc._id, 12346
                 Primus.fire 'data', {action:'delete', collection:'test', id:1}
+            .then ->
                 cache.findOne('test', {name:'Bob'})
             .then (doc) ->
                 assert.equal doc._id, 12346
