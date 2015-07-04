@@ -49,6 +49,39 @@ describe "flipList", ->
             http.expectGET("/api/test").respond(200, data)
             http.flush()
 
+        it "only queries database once for equivalent queries", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                inst.$get().then ->
+                    assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                    done()
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
+        it "overrides cache with 'force' option", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+            )
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                inst.$get(true).then ->
+                    assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                    done()
+            http.expectGET("/api/test").respond(200, data)
+            http.expectGET("/api/test").respond(200, data)
+            http.flush()
+
         it "resolves as document", (done) ->
             data =
                 _status: 'OK'

@@ -78,6 +78,22 @@ describe "flipDoc", ->
             http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
             http.flush()
 
+        it "overrides cache with 'force' option", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipDoc('test', 12346)
+            inst.$get().then ->
+                assertEqual inst, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                inst2 = flipDoc('test', 12346)
+                inst2.$get(true).then ->
+                    assertEqual inst2, {_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}
+                done()
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.expectGET(encodeURI '/api/test?q={"_id":12346}').respond(200, data)
+            http.flush()
+
 
     describe "$save", ->
         it "sends POST api call for new object and updates it", (done) ->

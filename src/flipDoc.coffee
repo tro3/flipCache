@@ -28,9 +28,9 @@ angular.module 'flipDoc', [
             for key, val of this
                 this[key] = null if not angular.isFunction(val)
 
-        $get:  () ->
+        $get:  (force=false) ->
             $q (resolve, reject) =>
-                flipCache.findOne(@_collection, {_id:@_id})
+                flipCache.findOne(@_collection, {_id:@_id}, {force:force})
                 .then (doc) => @_extend(doc); resolve(@)
                 .catch (err) -> reject(err)
 

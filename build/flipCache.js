@@ -308,7 +308,7 @@
         if (fields == null) {
           fields = {};
         }
-        if (!this._isCached(collection, query, options, fields)) {
+        if (options.force || !this._isCached(collection, query, options, fields)) {
           tmpQ = qGet(collection, query, fields).then((function(_this) {
             return function(resp) {
               return _this._cacheList(collection, query, options, fields, resp._items);
@@ -339,7 +339,7 @@
         if (fields == null) {
           fields = {};
         }
-        if (!this._isCached(collection, query, options, fields)) {
+        if (options.force || !this._isCached(collection, query, options, fields)) {
           tmpQ = qGet(collection, query, fields).then((function(_this) {
             return function(resp) {
               return _this._cacheList(collection, query, options, fields, resp._items);
@@ -504,11 +504,16 @@
         return results;
       };
 
-      FlipDoc.prototype.$get = function() {
+      FlipDoc.prototype.$get = function(force) {
+        if (force == null) {
+          force = false;
+        }
         return $q((function(_this) {
           return function(resolve, reject) {
             return flipCache.findOne(_this._collection, {
               _id: _this._id
+            }, {
+              force: force
             }).then(function(doc) {
               _this._extend(doc);
               return resolve(_this);
@@ -586,9 +591,15 @@
       flipList.filter = config.filter || {};
       flipList.options = config.options || {};
       flipList.fields = config.fields || {};
-      flipList.$get = function() {
+      flipList.$get = function(force) {
+        if (force == null) {
+          force = false;
+        }
         return $q(function(resolve, reject) {
-          return flipCache.find(flipList.collection, flipList.filter, flipList.options, flipList.fields).then(function(docs) {
+          var opts;
+          opts = angular.copy(flipList.options);
+          opts.force = force;
+          return flipCache.find(flipList.collection, flipList.filter, opts, flipList.fields).then(function(docs) {
             var i, len, x;
             flipList.splice(0, flipList.length);
             for (i = 0, len = docs.length; i < len; i++) {
