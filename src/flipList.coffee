@@ -15,9 +15,8 @@ angular.module 'flipList', [
         flipList.$get = (force=false) ->
             $q (resolve, reject) ->
                 opts = angular.copy(flipList.options)
-                opts.force = force
                 flipCache.find(flipList.collection, flipList.filter,
-                               opts, flipList.fields)
+                               opts, flipList.fields, force)
                 .then (docs) ->
                     flipList.splice(0, flipList.length)
                     flipList.push(flipDoc(flipList.collection, x)) for x in docs

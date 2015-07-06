@@ -260,10 +260,11 @@ angular.module 'flipCache', [
                 val.valid = false
 
 
-        find: (collection, query={}, options={}, fields={}) ->
-            if options.force or !@_isCached(collection, query, options, fields)
+        find: (collection, query={}, options={}, fields={}, force=false) ->
+            if force or !@_isCached(collection, query, options, fields)
                 tmpQ = qGet(collection, query, fields)
                 .then (resp) =>
+                    delete options.force
                     @_cacheList(collection, query, options, fields, resp._items)
                 .catch (err) ->
                     throw err
@@ -273,10 +274,11 @@ angular.module 'flipCache', [
                 @_getList(collection, query, options, fields)
 
 
-        findOne: (collection, query={}, options={}, fields={}) ->
-            if options.force or !@_isCached(collection, query, options, fields)
+        findOne: (collection, query={}, options={}, fields={}, force=false) ->
+            if force or !@_isCached(collection, query, options, fields)
                 tmpQ = qGet(collection, query, fields)
                 .then (resp) =>
+                    delete options.force
                     @_cacheList(collection, query, options, fields, resp._items)
                 .catch (err) ->
                     throw err

@@ -297,7 +297,7 @@
         return results;
       };
 
-      DbCache.prototype.find = function(collection, query, options, fields) {
+      DbCache.prototype.find = function(collection, query, options, fields, force) {
         var tmpQ;
         if (query == null) {
           query = {};
@@ -308,9 +308,13 @@
         if (fields == null) {
           fields = {};
         }
-        if (options.force || !this._isCached(collection, query, options, fields)) {
+        if (force == null) {
+          force = false;
+        }
+        if (force || !this._isCached(collection, query, options, fields)) {
           tmpQ = qGet(collection, query, fields).then((function(_this) {
             return function(resp) {
+              delete options.force;
               return _this._cacheList(collection, query, options, fields, resp._items);
             };
           })(this))["catch"](function(err) {
@@ -328,7 +332,7 @@
         })(this));
       };
 
-      DbCache.prototype.findOne = function(collection, query, options, fields) {
+      DbCache.prototype.findOne = function(collection, query, options, fields, force) {
         var tmpQ;
         if (query == null) {
           query = {};
@@ -339,9 +343,13 @@
         if (fields == null) {
           fields = {};
         }
-        if (options.force || !this._isCached(collection, query, options, fields)) {
+        if (force == null) {
+          force = false;
+        }
+        if (force || !this._isCached(collection, query, options, fields)) {
           tmpQ = qGet(collection, query, fields).then((function(_this) {
             return function(resp) {
+              delete options.force;
               return _this._cacheList(collection, query, options, fields, resp._items);
             };
           })(this))["catch"](function(err) {
@@ -512,9 +520,7 @@
           return function(resolve, reject) {
             return flipCache.findOne(_this._collection, {
               _id: _this._id
-            }, {
-              force: force
-            }).then(function(doc) {
+            }, {}, force).then(function(doc) {
               _this._extend(doc);
               return resolve(_this);
             })["catch"](function(err) {
@@ -598,8 +604,7 @@
         return $q(function(resolve, reject) {
           var opts;
           opts = angular.copy(flipList.options);
-          opts.force = force;
-          return flipCache.find(flipList.collection, flipList.filter, opts, flipList.fields).then(function(docs) {
+          return flipCache.find(flipList.collection, flipList.filter, opts, flipList.fields, force).then(function(docs) {
             var i, len, x;
             flipList.splice(0, flipList.length);
             for (i = 0, len = docs.length; i < len; i++) {
