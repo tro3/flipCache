@@ -176,15 +176,9 @@
               if ('tid' in data && (ref = data.tid, indexOf.call(_this.tids, ref) >= 0)) {
                 return _this.tids.splice(_this.tids.indexOf(data.tid), 1);
               } else {
-                switch (data.action) {
-                  case 'create':
-                    _this.invalidateLists(coll);
-                    break;
-                  case 'delete':
-                    _this.invalidateLists(coll);
-                    break;
-                  case 'edit':
-                    _this.invalidateDoc(coll, data.id);
+                _this.invalidateLists(coll);
+                if (data.action === 'edit') {
+                  _this.invalidateDoc(coll, data.id);
                 }
                 $rootScope.$broadcast('cacheEvent', data);
                 return $rootScope.$broadcast('socketEvent', data);
@@ -400,6 +394,7 @@
               tid = resp._tid;
               _this.tids.push(tid);
               _this._cacheDoc(collection, resp._item);
+              _this.invalidateLists(collection);
               $rootScope.$broadcast('cacheEvent', {
                 action: 'edit',
                 collection: collection,
@@ -423,6 +418,7 @@
               tid = resp._tid;
               _this.tids.push(tid);
               _this.invalidateDoc(collection, doc._id);
+              _this.invalidateLists(collection);
               $rootScope.$broadcast('cacheEvent', {
                 action: 'delete',
                 collection: collection,

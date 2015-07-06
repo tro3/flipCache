@@ -176,10 +176,8 @@ angular.module 'flipCache', [
                     if 'tid' of data and data.tid in @tids
                         @tids.splice(@tids.indexOf(data.tid),1)
                     else
-                        switch data.action
-                            when 'create' then @invalidateLists(coll)
-                            when 'delete' then @invalidateLists(coll)
-                            when 'edit'   then @invalidateDoc(coll, data.id)
+                        @invalidateLists(coll)
+                        @invalidateDoc(coll, data.id) if data.action == 'edit'
                         $rootScope.$broadcast 'cacheEvent', data
                         $rootScope.$broadcast 'socketEvent', data
 
@@ -315,6 +313,7 @@ angular.module 'flipCache', [
                     tid = resp._tid
                     @tids.push tid
                     @_cacheDoc(collection, resp._item)
+                    @invalidateLists(collection)
                     $rootScope.$broadcast 'cacheEvent',
                         action: 'edit'
                         collection: collection
@@ -333,6 +332,7 @@ angular.module 'flipCache', [
                     tid = resp._tid
                     @tids.push tid
                     @invalidateDoc(collection, doc._id)
+                    @invalidateLists(collection)
                     $rootScope.$broadcast 'cacheEvent',
                         action: 'delete'
                         collection: collection
