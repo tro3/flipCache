@@ -516,7 +516,7 @@
           return function(resolve, reject) {
             return flipCache.findOne(_this._collection, {
               _id: _this._id
-            }, {}, force).then(function(doc) {
+            }, {}, {}, force).then(function(doc) {
               _this._extend(doc);
               return resolve(_this);
             })["catch"](function(err) {
