@@ -593,24 +593,21 @@
     tmp = function(config) {
       var flipList;
       flipList = [];
-      flipList.collection = config.collection;
-      flipList.filter = config.filter || {};
-      flipList.options = config.options || {};
-      flipList.fields = config.fields || {};
+      flipList.params = {};
+      flipList.params.collection = config.collection;
+      flipList.params.filter = config.filter || {};
+      flipList.params.options = config.options || {};
+      flipList.params.fields = config.fields || {};
       flipList.$get = function(force) {
         if (force == null) {
           force = false;
         }
         return $q(function(resolve, reject) {
-          var opts;
-          opts = angular.copy(flipList.options);
-          return flipCache.find(flipList.collection, flipList.filter, opts, flipList.fields, force).then(function(docs) {
-            var i, len, x;
+          return flipCache.find(flipList.params.collection, flipList.params.filter, flipList.params.options, flipList.params.fields, force).then(function(docs) {
             flipList.splice(0, flipList.length);
-            for (i = 0, len = docs.length; i < len; i++) {
-              x = docs[i];
-              flipList.push(flipDoc(flipList.collection, x));
-            }
+            docs.forEach(function(x) {
+              return flipList.push(flipDoc(flipList.params.collection, x));
+            });
             return resolve(flipList);
           })["catch"](function(err) {
             return reject(err);
@@ -624,9 +621,6 @@
         return flipCache.addActive(flipList);
       };
       return flipList;
-    };
-    tmp.clearActives = function() {
-      return flipCache.clearActives();
     };
     return tmp;
   }]);

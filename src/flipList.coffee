@@ -7,19 +7,25 @@ angular.module 'flipList', [
 
     tmp = (config) ->
         flipList = []
-        flipList.collection = config.collection
-        flipList.filter = config.filter || {}
-        flipList.options = config.options || {}
-        flipList.fields = config.fields || {}
+        flipList.params = {}
+        flipList.params.collection = config.collection
+        flipList.params.filter = config.filter || {}
+        flipList.params.options = config.options || {}
+        flipList.params.fields = config.fields || {}
 
         flipList.$get = (force=false) ->
             $q (resolve, reject) ->
-                opts = angular.copy(flipList.options)
-                flipCache.find(flipList.collection, flipList.filter,
-                               opts, flipList.fields, force)
+                flipCache.find(
+                    flipList.params.collection,
+                    flipList.params.filter,
+                    flipList.params.options,
+                    flipList.params.fields,
+                    force
+                )
                 .then (docs) ->
                     flipList.splice(0, flipList.length)
-                    flipList.push(flipDoc(flipList.collection, x)) for x in docs
+                    docs.forEach (x) ->
+                        flipList.push flipDoc flipList.params.collection, x
                     resolve(flipList)
                 .catch (err) -> reject(err)
 
@@ -31,5 +37,4 @@ angular.module 'flipList', [
         
         return flipList
     
-    tmp.clearActives = -> flipCache.clearActives()
-    return tmp
+    tmp
