@@ -4,6 +4,23 @@ angular.module 'flipDoc', [
 
 .factory 'flipDoc', ($q, flipCache) ->
 
+    deepcopy = (obj) ->
+        if typeof obj != 'object'
+            return obj
+        if obj == null
+            return obj
+        if obj instanceof Array
+            return (deepcopy(x) for x in obj)
+        result = {}
+        for key, val of obj
+            if val instanceof Date
+                result[key] = deepcopy(val)
+                result[key].__proto__ = val.proto
+            else
+                result[key] = deepcopy(val)
+        result
+
+
     class FlipDoc
         constructor: (first, second) ->
             # Usage: FlipDoc(collection, id)
@@ -12,7 +29,7 @@ angular.module 'flipDoc', [
 
             @_id = null
             if typeof(first) == 'object'
-                @_extend(first)
+                @_extend(deepcopy(first))
             else # typeof(first) == 'string'
                 @_collection = first
                 if typeof(second) == 'object'

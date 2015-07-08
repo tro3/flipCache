@@ -464,12 +464,43 @@
 
 (function() {
   angular.module('flipDoc', ['flipCache']).factory('flipDoc', ["$q", "flipCache", function($q, flipCache) {
-    var FlipDoc, tmp;
+    var FlipDoc, deepcopy, tmp;
+    deepcopy = function(obj) {
+      var key, result, val, x;
+      if (typeof obj !== 'object') {
+        return obj;
+      }
+      if (obj === null) {
+        return obj;
+      }
+      if (obj instanceof Array) {
+        return (function() {
+          var i, len, results;
+          results = [];
+          for (i = 0, len = obj.length; i < len; i++) {
+            x = obj[i];
+            results.push(deepcopy(x));
+          }
+          return results;
+        })();
+      }
+      result = {};
+      for (key in obj) {
+        val = obj[key];
+        if (val instanceof Date) {
+          result[key] = deepcopy(val);
+          result[key].__proto__ = val.proto;
+        } else {
+          result[key] = deepcopy(val);
+        }
+      }
+      return result;
+    };
     FlipDoc = (function() {
       function FlipDoc(first, second) {
         this._id = null;
         if (typeof first === 'object') {
-          this._extend(first);
+          this._extend(deepcopy(first));
         } else {
           this._collection = first;
           if (typeof second === 'object') {
