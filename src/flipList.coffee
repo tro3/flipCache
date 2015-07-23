@@ -11,7 +11,8 @@ angular.module 'flipList', [
         flipList.params.collection = config.collection
         flipList.params.filter = config.filter || {}
         flipList.params.options = config.options || {}
-        flipList.params.fields = config.fields || {}
+        flipList.params.options.fields = config.fields || {}
+        flipList.params.options.sort = config.sort || {}
 
         flipList.$get = (force=false) ->
             $q (resolve, reject) ->
@@ -19,7 +20,6 @@ angular.module 'flipList', [
                     flipList.params.collection,
                     flipList.params.filter,
                     flipList.params.options,
-                    flipList.params.fields,
                     force
                 )
                 .then (docs) ->

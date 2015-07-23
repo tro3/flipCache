@@ -5,15 +5,18 @@
     var DbCache, deepcopy, getRandInt, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
     hashQuery = function(query, options) {
+      var opts;
       if (query == null) {
         query = {};
       }
       if (options == null) {
         options = {};
       }
+      opts = angular.copy(options);
+      delete opts.fields;
       return JSON.stringify({
         query: query,
-        options: options
+        options: opts
       });
     };
     hashFields = function(fields) {
@@ -62,7 +65,7 @@
       }
       return result;
     };
-    qGet = function(collection, query, fields) {
+    qGet = function(collection, query, options) {
       return $q(function(resolve, reject) {
         var params, url;
         url = "/api/" + collection;
@@ -70,8 +73,11 @@
         if (Object.keys(query).length > 0) {
           params.q = JSON.stringify(query);
         }
-        if (Object.keys(fields).length > 0) {
-          params.fields = JSON.stringify(fields);
+        if ('fields' in options && Object.keys(options.fields).length > 0) {
+          params.fields = JSON.stringify(options.fields);
+        }
+        if ('sort' in options && Object.keys(options.sort).length > 0) {
+          params.sort = JSON.stringify(options.sort);
         }
         return $http({
           method: 'GET',
@@ -197,8 +203,9 @@
         }
       };
 
-      DbCache.prototype._isCached = function(collection, query, options, fields) {
-        var hashF, hashQ;
+      DbCache.prototype._isCached = function(collection, query, options) {
+        var fields, hashF, hashQ;
+        fields = options.fields || {};
         this._setupCache(collection);
         if (isDocQuery(query)) {
           hashF = hashFields(fields);
@@ -212,8 +219,9 @@
         }
       };
 
-      DbCache.prototype._getList = function(collection, query, options, fields) {
-        var hashF, hashQ, x;
+      DbCache.prototype._getList = function(collection, query, options) {
+        var fields, hashF, hashQ, x;
+        fields = options.fields || {};
         this._setupCache(collection);
         if (isDocQuery(query)) {
           hashF = hashFields(fields);
@@ -234,14 +242,16 @@
         }
       };
 
-      DbCache.prototype._getDoc = function(collection, query, fields) {
-        var hashF;
+      DbCache.prototype._getDoc = function(collection, query, options) {
+        var fields, hashF;
+        fields = options.fields || {};
         hashF = hashFields(fields);
         return deepcopy(this._docCache[collection][query._id][hashF]);
       };
 
-      DbCache.prototype._cacheList = function(collection, query, options, fields, docs) {
-        var hashF, hashQ;
+      DbCache.prototype._cacheList = function(collection, query, options, docs) {
+        var fields, hashF, hashQ;
+        fields = options.fields || {};
         this._setupCache(collection);
         if (isDocQuery(query)) {
           return this._cacheDoc(collection, docs[0], fields);
@@ -255,14 +265,18 @@
           this._listCache[collection][hashQ].docs = [];
           return docs.forEach((function(_this) {
             return function(doc) {
-              return _this._listCache[collection][hashQ].docs.push(_this._cacheDoc(collection, doc, fields));
+              return _this._listCache[collection][hashQ].docs.push(_this._cacheDoc(collection, doc, options));
             };
           })(this));
         }
       };
 
-      DbCache.prototype._cacheDoc = function(collection, doc, fields) {
-        var hashF;
+      DbCache.prototype._cacheDoc = function(collection, doc, options) {
+        var fields, hashF;
+        if (options == null) {
+          options = {};
+        }
+        fields = options.fields || {};
         hashF = hashFields(fields);
         if (!(doc._id in this._docCache[collection])) {
           this._docCache[collection][doc._id] = {};
@@ -291,7 +305,7 @@
         return results;
       };
 
-      DbCache.prototype.find = function(collection, query, options, fields, force) {
+      DbCache.prototype.find = function(collection, query, options, force) {
         var tmpQ;
         if (query == null) {
           query = {};
@@ -299,17 +313,13 @@
         if (options == null) {
           options = {};
         }
-        if (fields == null) {
-          fields = {};
-        }
         if (force == null) {
           force = false;
         }
-        if (force || !this._isCached(collection, query, options, fields)) {
-          tmpQ = qGet(collection, query, fields).then((function(_this) {
+        if (force || !this._isCached(collection, query, options)) {
+          tmpQ = qGet(collection, query, options).then((function(_this) {
             return function(resp) {
-              delete options.force;
-              return _this._cacheList(collection, query, options, fields, resp._items);
+              return _this._cacheList(collection, query, options, resp._items);
             };
           })(this))["catch"](function(err) {
             throw err;
@@ -321,12 +331,12 @@
         }
         return tmpQ.then((function(_this) {
           return function() {
-            return _this._getList(collection, query, options, fields);
+            return _this._getList(collection, query, options);
           };
         })(this));
       };
 
-      DbCache.prototype.findOne = function(collection, query, options, fields, force) {
+      DbCache.prototype.findOne = function(collection, query, options, force) {
         var tmpQ;
         if (query == null) {
           query = {};
@@ -334,17 +344,13 @@
         if (options == null) {
           options = {};
         }
-        if (fields == null) {
-          fields = {};
-        }
         if (force == null) {
           force = false;
         }
-        if (force || !this._isCached(collection, query, options, fields)) {
-          tmpQ = qGet(collection, query, fields).then((function(_this) {
+        if (force || !this._isCached(collection, query, options)) {
+          tmpQ = qGet(collection, query, options).then((function(_this) {
             return function(resp) {
-              delete options.force;
-              return _this._cacheList(collection, query, options, fields, resp._items);
+              return _this._cacheList(collection, query, options, resp._items);
             };
           })(this))["catch"](function(err) {
             throw err;
@@ -356,7 +362,7 @@
         }
         return tmpQ.then((function(_this) {
           return function() {
-            return _this._getList(collection, query, options, fields)[0];
+            return _this._getList(collection, query, options)[0];
           };
         })(this));
       };
@@ -547,7 +553,7 @@
           return function(resolve, reject) {
             return flipCache.findOne(_this._collection, {
               _id: _this._id
-            }, {}, {}, force).then(function(doc) {
+            }, {}, force).then(function(doc) {
               _this._extend(doc);
               return resolve(_this);
             })["catch"](function(err) {
@@ -624,13 +630,14 @@
       flipList.params.collection = config.collection;
       flipList.params.filter = config.filter || {};
       flipList.params.options = config.options || {};
-      flipList.params.fields = config.fields || {};
+      flipList.params.options.fields = config.fields || {};
+      flipList.params.options.sort = config.sort || {};
       flipList.$get = function(force) {
         if (force == null) {
           force = false;
         }
         return $q(function(resolve, reject) {
-          return flipCache.find(flipList.params.collection, flipList.params.filter, flipList.params.options, flipList.params.fields, force).then(function(docs) {
+          return flipCache.find(flipList.params.collection, flipList.params.filter, flipList.params.options, force).then(function(docs) {
             flipList.splice(0, flipList.length);
             docs.forEach(function(x) {
               return flipList.push(flipDoc(flipList.params.collection, x));

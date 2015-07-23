@@ -47,7 +47,7 @@ angular.module 'flipDoc', [
 
         $get:  (force=false) ->
             $q (resolve, reject) =>
-                flipCache.findOne(@_collection, {_id:@_id}, {}, {}, force)
+                flipCache.findOne(@_collection, {_id:@_id}, {}, force)
                 .then (doc) => @_extend(doc); resolve(@)
                 .catch (err) -> reject(err)
 

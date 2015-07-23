@@ -127,3 +127,19 @@ describe "flipList", ->
             http.expectGET(encodeURI '/api/test?fields={"name":1}&q={"name":"Bob"}').respond(200, data)
             http.flush()
             
+        it "returns simple query with sorting", (done) ->
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            inst = flipList(
+                collection: 'test'
+                filter: {name:{$regex:'^B.*'}}
+                sort: {name:1}
+            )
+            inst.$get().then ->
+                assertListEqual inst, [{_id:12346, _collection:'test', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+                done()
+            http.expectGET(encodeURI '/api/test?q={"name":{"$regex":"^B.*"}}&sort={"name":1}').respond(200, data)
+            http.flush()
+            

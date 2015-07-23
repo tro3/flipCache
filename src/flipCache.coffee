@@ -6,9 +6,11 @@ angular.module 'flipCache', [
     p = console.log
 
     hashQuery = (query={}, options={}) ->
+        opts = angular.copy options
+        delete opts.fields
         JSON.stringify(
             query: query
-            options: options
+            options: opts
         )
 
     hashFields = (fields={}) ->
@@ -41,14 +43,16 @@ angular.module 'flipCache', [
         result
 
 
-    qGet = (collection, query, fields) ->
+    qGet = (collection, query, options) ->
         $q (resolve, reject) ->
             url = "/api/#{collection}"
             params = {}
             if Object.keys(query).length > 0
                 params.q = JSON.stringify(query)
-            if Object.keys(fields).length > 0
-                params.fields = JSON.stringify(fields)
+            if 'fields' of options and Object.keys(options.fields).length > 0
+                params.fields = JSON.stringify(options.fields)
+            if 'sort' of options and Object.keys(options.sort).length > 0
+                params.sort = JSON.stringify(options.sort)
             $http(
                 method: 'GET',
                 url: url
@@ -187,7 +191,8 @@ angular.module 'flipCache', [
             @_listCache[collection]  = {} if !(collection of @_listCache)
             @_docCache[collection]  = {} if !(collection of @_docCache)
 
-        _isCached: (collection, query, options, fields) ->
+        _isCached: (collection, query, options) ->
+            fields = options.fields || {}
             @_setupCache(collection)
             if isDocQuery(query)
                 hashF = hashFields(fields)
@@ -206,7 +211,8 @@ angular.module 'flipCache', [
                         x.valid && hashF of x
                 )
 
-        _getList: (collection, query, options, fields) ->
+        _getList: (collection, query, options) ->
+            fields = options.fields || {}
             @_setupCache(collection)
             if isDocQuery(query)
                 hashF = hashFields(fields)
@@ -217,11 +223,13 @@ angular.module 'flipCache', [
                 return deepcopy(
                     (x[hashF] for x in @_listCache[collection][hashQ].docs))
 
-        _getDoc: (collection, query, fields) ->
+        _getDoc: (collection, query, options) ->
+            fields = options.fields || {}
             hashF = hashFields(fields)
             return deepcopy(@_docCache[collection][query._id][hashF])
 
-        _cacheList: (collection, query, options, fields, docs) ->
+        _cacheList: (collection, query, options, docs) ->
+            fields = options.fields || {}
             @_setupCache(collection)
             if isDocQuery(query)
                 @_cacheDoc(collection, docs[0], fields)
@@ -234,10 +242,11 @@ angular.module 'flipCache', [
                 @_listCache[collection][hashQ].docs = []
                 docs.forEach (doc) =>
                     @_listCache[collection][hashQ].docs.push(
-                        @_cacheDoc(collection, doc, fields)
+                        @_cacheDoc(collection, doc, options)
                     )
 
-        _cacheDoc: (collection, doc, fields) ->
+        _cacheDoc: (collection, doc, options={}) ->
+            fields = options.fields || {}
             hashF = hashFields(fields)
             if !(doc._id of @_docCache[collection])
                 @_docCache[collection][doc._id] = {}
@@ -258,32 +267,30 @@ angular.module 'flipCache', [
                 val.valid = false
 
 
-        find: (collection, query={}, options={}, fields={}, force=false) ->
-            if force or !@_isCached(collection, query, options, fields)
-                tmpQ = qGet(collection, query, fields)
+        find: (collection, query={}, options={}, force=false) ->
+            if force or !@_isCached(collection, query, options)
+                tmpQ = qGet(collection, query, options)
                 .then (resp) =>
-                    delete options.force
-                    @_cacheList(collection, query, options, fields, resp._items)
+                    @_cacheList(collection, query, options, resp._items)
                 .catch (err) ->
                     throw err
             else
                 tmpQ = $q((res)->res())
             return tmpQ.then =>
-                @_getList(collection, query, options, fields)
+                @_getList(collection, query, options)
 
 
-        findOne: (collection, query={}, options={}, fields={}, force=false) ->
-            if force or !@_isCached(collection, query, options, fields)
-                tmpQ = qGet(collection, query, fields)
+        findOne: (collection, query={}, options={}, force=false) ->
+            if force or !@_isCached(collection, query, options)
+                tmpQ = qGet(collection, query, options)
                 .then (resp) =>
-                    delete options.force
-                    @_cacheList(collection, query, options, fields, resp._items)
+                    @_cacheList(collection, query, options, resp._items)
                 .catch (err) ->
                     throw err
             else
                 tmpQ = $q((res)->res())
             return tmpQ.then =>
-                @_getList(collection, query, options, fields)[0]
+                @_getList(collection, query, options)[0]
 
 
         insert: (collection, doc) ->
