@@ -4,6 +4,7 @@ angular.module 'flipCache', [
 .factory 'flipCache', ($http, $q, $rootScope) ->
 
     p = console.log
+    cache = null
 
     hashQuery = (query={}, options={}) ->
         opts = angular.copy options
@@ -45,7 +46,7 @@ angular.module 'flipCache', [
 
     qGet = (collection, query, options) ->
         $q (resolve, reject) ->
-            url = "/api/#{collection}"
+            url = cache.apiRoot + "/#{collection}"
             params = {}
             if Object.keys(query).length > 0
                 params.q = JSON.stringify(query)
@@ -73,7 +74,7 @@ angular.module 'flipCache', [
 
     qPost = (collection, doc) ->
         $q (resolve, reject) ->
-            url = "/api/#{collection}"
+            url = cache.apiRoot + "/#{collection}"
             $http(
                 method: 'POST',
                 url: url
@@ -94,7 +95,7 @@ angular.module 'flipCache', [
 
     qPut = (collection, doc) ->
         $q (resolve, reject) ->
-            url = "/api/#{collection}/#{doc._id}"
+            url = cache.apiRoot + "/#{collection}/#{doc._id}"
             $http(
                 method: 'PUT',
                 url: url
@@ -115,7 +116,7 @@ angular.module 'flipCache', [
 
     qDelete = (collection, doc) ->
         $q (resolve, reject) ->
-            url = "/api/#{collection}/#{doc._id}"
+            url = cache.apiRoot + "/#{collection}/#{doc._id}"
             $http(
                 method: 'DELETE',
                 url: url
@@ -172,6 +173,7 @@ angular.module 'flipCache', [
             @_actives = []
             @tids = []
             @qBusy = $q (resolve, reject) -> resolve()
+            @apiRoot = "/api"
 
             primus = Primus.connect()
             primus.on 'data', (data) =>
@@ -363,4 +365,5 @@ angular.module 'flipCache', [
             @_actives.splice(0)
 
 
-    new DbCache
+    cache = new DbCache
+    cache

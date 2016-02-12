@@ -2,8 +2,9 @@
   var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", function($http, $q, $rootScope) {
-    var DbCache, deepcopy, getRandInt, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
+    var DbCache, cache, deepcopy, getRandInt, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
+    cache = null;
     hashQuery = function(query, options) {
       var opts;
       if (query == null) {
@@ -68,7 +69,7 @@
     qGet = function(collection, query, options) {
       return $q(function(resolve, reject) {
         var params, url;
-        url = "/api/" + collection;
+        url = cache.apiRoot + ("/" + collection);
         params = {};
         if (Object.keys(query).length > 0) {
           params.q = JSON.stringify(query);
@@ -100,7 +101,7 @@
     qPost = function(collection, doc) {
       return $q(function(resolve, reject) {
         var url;
-        url = "/api/" + collection;
+        url = cache.apiRoot + ("/" + collection);
         return $http({
           method: 'POST',
           url: url,
@@ -122,7 +123,7 @@
     qPut = function(collection, doc) {
       return $q(function(resolve, reject) {
         var url;
-        url = "/api/" + collection + "/" + doc._id;
+        url = cache.apiRoot + ("/" + collection + "/" + doc._id);
         return $http({
           method: 'PUT',
           url: url,
@@ -144,7 +145,7 @@
     qDelete = function(collection, doc) {
       return $q(function(resolve, reject) {
         var url;
-        url = "/api/" + collection + "/" + doc._id;
+        url = cache.apiRoot + ("/" + collection + "/" + doc._id);
         return $http({
           method: 'DELETE',
           url: url
@@ -173,6 +174,7 @@
         this.qBusy = $q(function(resolve, reject) {
           return resolve();
         });
+        this.apiRoot = "/api";
         primus = Primus.connect();
         primus.on('data', (function(_this) {
           return function(data) {
@@ -463,7 +465,8 @@
       return DbCache;
 
     })();
-    return new DbCache;
+    cache = new DbCache;
+    return cache;
   }]);
 
 }).call(this);

@@ -87,6 +87,20 @@ describe "flipCache", ->
             http.expectGET('/api/test').respond(200, data)
             http.flush()
 
+        it "handles change in api root", (done) ->
+            cache.apiRoot = '/home/api'
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:'12345', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            cache.find('test').then (data1) ->
+                assert.deepEqual data1, data._items
+                cache.find('test').then (data2) ->
+                    assert.deepEqual data2, data._items
+                    done()
+            http.expectGET('/home/api/test').respond(200, data)
+            http.flush()
+
 
 
     describe "findOne", ->
@@ -132,6 +146,20 @@ describe "flipCache", ->
             http.expectGET(encodeURI '/api/test?q={"name":"Bob"}').respond(200, data)
             http.flush()
 
+        it "handles change in api root", (done) ->
+            cache.apiRoot = '/home/api'
+            data =
+                _status: 'OK'
+                _auth: true
+                _items: [{_id:'12345', _auth:{_edit:true, _delete:true}, name:'Bob'}]
+            cache.findOne('test', {name:'Bob'}).then (data1) ->
+                assert.deepEqual data1, data._items[0]
+                cache.findOne('test', {name:'Bob'}).then (data2) ->
+                    assert.deepEqual data2, data._items[0]
+                    done()
+            http.expectGET(encodeURI '/home/api/test?q={"name":"Bob"}').respond(200, data)
+            http.flush()
+
 
     describe "insert", ->
         it "sends proper API call, caching result", (done) ->
@@ -154,6 +182,29 @@ describe "flipCache", ->
                     assert.deepEqual data2, respData._item
                     done()
             http.expectPOST("/api/test", data).respond(200, respData)
+            http.flush()
+
+        it "handles api root change", (done) ->
+            cache.apiRoot = '/home/api'
+            data = {name:'Bob'}
+            respData =
+                _status: 'OK'
+                _tid: 2
+                _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+            a = cache.insert('test', data)
+            b = Primus.fire 'data', {action:'create', collection:'test', id:12346, tid:2}            
+            b.then -> a.then (resp) ->
+                assert.equal sEvents.length, 0
+                assert.equal cEvents.length, 1
+                assert.deepEqual cEvents[0],
+                    action:'create'
+                    collection:'test'
+                    id:12346
+                    tid:2
+                cache.findOne('test', {_id:12346}).then (data2) ->
+                    assert.deepEqual data2, respData._item
+                    done()
+            http.expectPOST("/home/api/test", data).respond(200, respData)
             http.flush()
 
 
@@ -179,6 +230,30 @@ describe "flipCache", ->
                     assert.deepEqual data2, respData._item
                     done()
             http.expectPUT("/api/test/12346", data).respond(200, respData)
+            http.flush()
+
+        it "handles an api change", (done) ->
+            cache.apiRoot = '/home/api'
+            data = {_id:12346, name:'Bob'}
+            respData =
+                _status: 'OK'
+                _tid: 23
+                _item: {_id:12346, _auth:{_edit:true, _delete:true}, name:'Bob'}
+            a = cache.update('test', data)
+            b = Primus.fire 'data', {action:'edit', collection:'test', id:12346, tid:23}          
+            b.then -> a.then (resp) ->
+                assert.deepEqual resp, respData._item
+                assert.equal sEvents.length, 0
+                assert.equal cEvents.length, 1
+                assert.deepEqual cEvents[0],
+                    action:'edit'
+                    collection:'test'
+                    id:12346
+                    tid:23
+                cache.findOne('test', {_id:12346}).then (data2) ->
+                    assert.deepEqual data2, respData._item
+                    done()
+            http.expectPUT("/home/api/test/12346", data).respond(200, respData)
             http.flush()
 
 
