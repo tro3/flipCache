@@ -1,7 +1,7 @@
 angular.module 'flipCache', [
 ]
 
-.factory 'flipCache', ($http, $q, $rootScope) ->
+.factory 'flipCache', ($http, $q, $rootScope, $window) ->
 
     p = console.log
     cache = null
@@ -167,7 +167,7 @@ angular.module 'flipCache', [
     """
 
     class DbCache
-        constructor: (url, config)->
+        constructor: ->
             @_listCache = {}
             @_docCache = {}
             @_actives = []
@@ -175,7 +175,8 @@ angular.module 'flipCache', [
             @qBusy = $q (resolve, reject) -> resolve()
             @apiRoot = "/api"
 
-            primus = Primus.connect(url, config)
+            w = $window.location
+            primus = Primus.connect("#{w.protocol}//#{w.hostname}:#{w.port || 8000}")
             primus.on 'data', (data) =>
                 @qBusy.then =>
                     coll = data.collection

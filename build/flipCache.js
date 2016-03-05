@@ -1,7 +1,7 @@
 (function() {
   var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-  angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", function($http, $q, $rootScope) {
+  angular.module('flipCache', []).factory('flipCache', ["$http", "$q", "$rootScope", "$window", function($http, $q, $rootScope, $window) {
     var DbCache, cache, deepcopy, getRandInt, hashFields, hashQuery, isDocQuery, p, qDelete, qGet, qPost, qPut;
     p = console.log;
     cache = null;
@@ -165,8 +165,8 @@
     };
     "Cache structure\n\ncreate: invalidates all listQueries of a collection\ndelete: invalidates all listQueries of a collection\nupdate: invalidates individual (but locally recaches)\n\n\nNote for server-side paging and sorting, these params will\nhave to show up in the listCache querySpecs...\n\nlistCache:\n    {collectionName:\n        querySpec1:\n            valid: true\n            docs: [doc1, doc2..]\n        querySpec2:\n        ...\n    }\ndocCache:\n    {collectionName:\n        id1:\n            valid: true\n            fieldSpec1: {doc}\n            fieldSpec2: {doc}\n        id2:\n        ...\n    }\n";
     DbCache = (function() {
-      function DbCache(url, config) {
-        var primus;
+      function DbCache() {
+        var primus, w;
         this._listCache = {};
         this._docCache = {};
         this._actives = [];
@@ -175,7 +175,8 @@
           return resolve();
         });
         this.apiRoot = "/api";
-        primus = Primus.connect(url, config);
+        w = $window.location;
+        primus = Primus.connect(w.protocol + "//" + w.hostname + ":" + (w.port || 8000));
         primus.on('data', (function(_this) {
           return function(data) {
             return _this.qBusy.then(function() {
