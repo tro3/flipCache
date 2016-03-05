@@ -165,7 +165,7 @@
     };
     "Cache structure\n\ncreate: invalidates all listQueries of a collection\ndelete: invalidates all listQueries of a collection\nupdate: invalidates individual (but locally recaches)\n\n\nNote for server-side paging and sorting, these params will\nhave to show up in the listCache querySpecs...\n\nlistCache:\n    {collectionName:\n        querySpec1:\n            valid: true\n            docs: [doc1, doc2..]\n        querySpec2:\n        ...\n    }\ndocCache:\n    {collectionName:\n        id1:\n            valid: true\n            fieldSpec1: {doc}\n            fieldSpec2: {doc}\n        id2:\n        ...\n    }\n";
     DbCache = (function() {
-      function DbCache() {
+      function DbCache(config) {
         var primus;
         this._listCache = {};
         this._docCache = {};
@@ -175,7 +175,7 @@
           return resolve();
         });
         this.apiRoot = "/api";
-        primus = Primus.connect();
+        primus = Primus.connect(config);
         primus.on('data', (function(_this) {
           return function(data) {
             return _this.qBusy.then(function() {
