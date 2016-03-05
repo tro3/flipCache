@@ -167,7 +167,7 @@ angular.module 'flipCache', [
     """
 
     class DbCache
-        constructor: (config)->
+        constructor: (url, config)->
             @_listCache = {}
             @_docCache = {}
             @_actives = []
@@ -175,7 +175,7 @@ angular.module 'flipCache', [
             @qBusy = $q (resolve, reject) -> resolve()
             @apiRoot = "/api"
 
-            primus = Primus.connect(config)
+            primus = Primus.connect(url, config)
             primus.on 'data', (data) =>
                 @qBusy.then =>
                     coll = data.collection
